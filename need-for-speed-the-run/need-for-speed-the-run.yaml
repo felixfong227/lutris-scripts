@@ -1,0 +1,47 @@
+# Need for Speed: The Run (PC, 2011)
+#
+# Installs the ready-to-play copy hosted on archive.org:
+#   https://archive.org/details/need-for-speed-the-run_202512
+#
+# Run with:
+#   lutris -i need-for-speed-the-run.yaml
+#
+# Free space needed during install is about 29 GB (11.2 GB archive plus the
+# 17.5 GB game). Lutris deletes the archive after a successful install. If the
+# install fails, it keeps the archive so a retry doesn't download it again.
+
+name: "Need for Speed: The Run"
+game_slug: need-for-speed-the-run
+version: archive.org
+slug: need-for-speed-the-run-archive-org
+runner: wine
+
+script:
+  game:
+    exe: Need for Speed The Run/Need For Speed The Run.exe
+    prefix: $GAMEDIR
+    arch: win64
+
+  files:
+    - archive:
+        url: https://archive.org/download/need-for-speed-the-run_202512/Need%20for%20Speed%20The%20Run.7z
+        filename: need-for-speed-the-run.7z
+        checksum: md5:fa59bbeefa8ad5dfacbca5c7d91b70c6
+
+  installer:
+    - task:
+        name: create_prefix
+        arch: win64
+        prefix: $GAMEDIR
+
+    # The archive is the installed game folder, already on Update 1 with the
+    # Neo crack and Fusion Fix, so there is no setup to run.
+    - extract:
+        file: archive
+        dst: $GAMEDIR
+
+  wine:
+    overrides:
+      # dinput8.dll in the game folder is Ultimate ASI Loader, which loads
+      # Fusion Fix from plugins/.
+      dinput8: n,b

@@ -3,7 +3,7 @@
 Installs the 2008 PC version of Need for Speed: Undercover from the RELOADED DVD image on archive.org:
 https://archive.org/details/need-for-speed-undercover_202201
 
-Status: not tested end to end yet. The steps were checked against the Lutris source, but nobody has run a full install with this script.
+Status: tested in October 2026 on a Steam Deck with Flatpak Lutris and dw-proton. It installs and the game launches.
 
 ## Requirements
 
@@ -41,6 +41,10 @@ The official 1.0.1.17 patch is not included. It replaces `nfs.exe` with a versio
 
 "Source does not exist" at the backup step means setup didn't install to the default path. Usually the install location was changed, or setup was cancelled. Run the script again and keep the default location.
 
+If setup asks for a CD key and you can't see the keygen, it's probably behind the setup window. In Desktop Mode on the Deck, find it on the taskbar or with Alt+Tab. Game Mode only shows one window at a time, so the install is easier in Desktop Mode.
+
 If the installer looks stuck after setup closes, the keygen is probably still open. Close it.
+
+If Lutris fails to set up Wine with "File exists", see [Troubleshooting](../README.md#troubleshooting) in the main README.
 
 If setup asks for the disc, it won't run from an unpacked folder. The script would then need an `insert-disc` step in place of the 7z extract, so you mount `rld-nfuc.iso` yourself and setup runs from the mount.
