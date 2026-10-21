@@ -1,0 +1,71 @@
+# Need for Speed: Undercover (PC, 2008)
+#
+# Installs the RELOADED DVD image hosted on archive.org:
+#   https://archive.org/details/need-for-speed-undercover_202201
+#
+# Run with:
+#   lutris -i need-for-speed-undercover.yaml
+#
+# Free space needed during install is about 20 GB (5.2 GB ISO, its extracted
+# copy, and the installed game). Lutris deletes the ISO and the extracted
+# copy after a successful install. If the install fails, it keeps the ISO so
+# a retry doesn't download it again.
+
+name: "Need for Speed: Undercover"
+game_slug: need-for-speed-undercover
+version: archive.org ISO
+slug: need-for-speed-undercover-archive-org
+runner: wine
+
+script:
+  game:
+    exe: drive_c/Program Files (x86)/EA Games/Need for Speed Undercover/nfs.exe
+    prefix: $GAMEDIR
+    arch: win64
+
+  files:
+    - iso:
+        url: https://archive.org/download/need-for-speed-undercover_202201/rld-nfuc.iso
+        filename: rld-nfuc.iso
+        checksum: md5:a0c944974951cfb359296fc88c3c3118
+
+  installer:
+    - task:
+        name: create_prefix
+        arch: win64
+        prefix: $GAMEDIR
+
+    # Unpacked with 7z, so nothing has to be mounted.
+    - extract:
+        file: iso
+        dst: $CACHE/disc
+
+    # Start the keygen and setup in the same Wine session so the key can be
+    # copied from one into the other.
+    - write_file:
+        file: $CACHE/disc/lutris-setup.bat
+        content: |
+          @echo off
+          start Crack\rld-nfsk.exe
+          setup.exe
+          exit /b 0
+
+    - task:
+        name: wineexec
+        executable: $CACHE/disc/lutris-setup.bat
+        description: >-
+          Setup and the keygen are opening. Generate a key in the keygen and
+          paste it into setup when asked. Keep the default install location
+          and skip EA registration. When setup is done, close the keygen so
+          Lutris can continue.
+
+    # Keeps the original SecuROM exe. This step also fails, with
+    # "Source does not exist", if setup did not install to the default path.
+    - merge:
+        src: $GAMEDIR/drive_c/Program Files (x86)/EA Games/Need for Speed Undercover/nfs.exe
+        dst: $GAMEDIR/drive_c/Program Files (x86)/EA Games/Need for Speed Undercover/backup
+
+    # The release's patched nfs.exe, which removes the SecuROM disc check.
+    - merge:
+        src: $CACHE/disc/Crack/nfs.exe
+        dst: $GAMEDIR/drive_c/Program Files (x86)/EA Games/Need for Speed Undercover
