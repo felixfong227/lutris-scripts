@@ -96,7 +96,7 @@ script:
     - merge: {src: appx_portable, dst: $GAMEDIR/downloads}
     - merge: {src: offline_files, dst: $GAMEDIR/downloads}
     - execute:
-        description: Build Wine UWP and DXVK locally. Compilation can take a long time.
+        description: Build Wine UWP and DXVK locally
         disable_runtime: true
         env:
           FH3_WINE_SOURCE: $wine_source
