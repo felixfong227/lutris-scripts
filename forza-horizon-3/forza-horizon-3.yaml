@@ -151,7 +151,7 @@ script:
           mkdir -p "$WINE_SRC" "$WINE_BUILD"
           tar -xJf "$FH3_WINE_SOURCE" -C "$WINE_SRC" --strip-components=1
           git init "$WINE_UWP_ROOT"
-          git -C "$WINE_UWP_ROOT" fetch --depth=1 https://github.com/felixfong227/wine-uwp.git ebc5817dde37d6c6595a7a33cb5355c6d62a8d28
+          git -C "$WINE_UWP_ROOT" fetch --depth=1 https://github.com/felixfong227/wine-uwp.git 58105bc0e9a656848041b6dd1785a85882c3fafb
           git -C "$WINE_UWP_ROOT" checkout --detach FETCH_HEAD
           "$WINE_UWP_ROOT/sync-wine.sh" --to-tree
           cd "$WINE_SRC"

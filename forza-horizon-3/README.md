@@ -125,7 +125,7 @@ These files contain the offline identity that the game uses for saves.
 ## Runtime and Windows components
 
 The installer downloads Wine 11.20 and checks its SHA-256 hash.
-It applies [the Wine-UWP fork at `ebc5817`](https://github.com/felixfong227/wine-uwp/tree/ebc5817dde37d6c6595a7a33cb5355c6d62a8d28).
+It applies [the Wine-UWP fork at `58105bc`](https://github.com/felixfong227/wine-uwp/tree/58105bc0e9a656848041b6dd1785a85882c3fafb).
 The YAML uses the fork directly instead of carrying a second copy of its source changes.
 The Wine build supports x86-64 and i386 and uses two parallel jobs.
 
