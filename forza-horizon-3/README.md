@@ -1,12 +1,15 @@
-# Forza Horizon 3
+# Forza Horizon 3 (experimental)
 
-This installer is experimental. A clean installation from this YAML has not yet been verified.
-Do not use this draft to replace the working test installation.
+**Status: Experimental.** A clean installation from this YAML has not yet been verified.
+Use a separate installation directory and back up existing saves before testing.
+
+This YAML uses the published Wine-UWP revision `58105bc` and its custom DXVK build.
+The newer Wine-side adapter for unmodified DXVK is under separate testing and is not included in this installer.
 
 The existing test installation passes the game's hardware checks, loads saved progress, and opens the pause menu.
 Keyboard driving and the physical Steam Controller work in direct Lutris launches, and the game exits normally.
 A manual Steam test completed the chase and won the first race in a BMW M4. The game wrote new save data.
-A fresh Steam launch restored the BMW M4, 26,387 credits, and one completed exhibition.
+A fresh Steam launch restored the saved race progress.
 The cause of an earlier driving crash remains unknown.
 
 Road textures sometimes appear late.

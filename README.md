@@ -9,7 +9,10 @@ Each game has one YAML installer and a README with its requirements and installa
 | --- | --- | --- |
 | Need for Speed: Undercover, 2008 | [Undercover](need-for-speed-undercover/README.md) | RELOADED DVD image on Internet Archive |
 | Need for Speed: The Run, 2011 | [The Run](need-for-speed-the-run/README.md) | Game archive on Internet Archive |
-| Forza Horizon 3 | [Forza Horizon 3](forza-horizon-3/README.md) | FitGirl repack on Internet Archive |
+| Forza Horizon 3 (experimental) | [Forza Horizon 3](forza-horizon-3/README.md) | FitGirl repack on Internet Archive |
+
+The Forza Horizon 3 installer is experimental. Clean installation and gameplay validation are incomplete.
+Read its guide for known limitations before testing.
 
 ## Installation
 
