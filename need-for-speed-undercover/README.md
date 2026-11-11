@@ -1,50 +1,77 @@
 # Need for Speed: Undercover
 
-Installs the 2008 PC version of Need for Speed: Undercover from the RELOADED DVD image on archive.org:
-https://archive.org/details/need-for-speed-undercover_202201
-
-Status: tested in October 2026 on a Steam Deck with Flatpak Lutris and dw-proton. It installs and the game launches.
+This installer uses the 2008 PC release from the [RELOADED DVD image on Internet Archive](https://archive.org/details/need-for-speed-undercover_202201).
+It extracts the image, runs game setup, and installs the release's patched executable.
 
 ## Requirements
 
-- Lutris with its default Wine runner.
-- About 20 GB of free space during the install. The ISO is 5.2 GB, the unpacked copy takes another 5.2 GB, and the installed game needs about 10 GB.
+- Lutris with a Wine runner.
+- Approximately 20 GB of free space during installation.
 
-## Install
+The download is 5.2 GB. The extracted image needs another 5.2 GB, and the installed game needs approximately 10 GB.
+On a Steam Deck, use Desktop Mode to access both setup windows.
 
-From the repo root:
+## Installation
 
-```
+Run one of these commands from the repository root.
+
+For native Lutris:
+
+```sh
 lutris -i need-for-speed-undercover/need-for-speed-undercover.yaml
 ```
 
-The script does this:
+For Flatpak Lutris:
 
-1. Downloads `rld-nfuc.iso` and checks its md5.
-2. Creates a 64-bit Wine prefix in the install folder and unpacks the ISO with 7z. Nothing gets mounted.
-3. Opens EA's setup and the release's keygen side by side.
-4. Copies the original `nfs.exe` into `backup/` and replaces it with the patched `nfs.exe` from the ISO's `Crack` folder.
+```sh
+flatpak run net.lutris.Lutris -i need-for-speed-undercover/need-for-speed-undercover.yaml
+```
 
-Step 3 is the only part you do by hand. Generate a key in the keygen and paste it into setup when it asks. Keep the default install location and skip EA registration. When setup finishes, close the keygen. Lutris waits for both windows to close before it moves on.
+Lutris downloads `rld-nfuc.iso` and checks its MD5 hash.
+It creates a 64-bit Wine prefix in the selected installation directory.
+A Wine prefix contains the game's Windows files and settings.
+The installer extracts the image with 7-Zip without mounting it.
 
-After a successful install Lutris deletes the ISO and the unpacked files. After a failed one it keeps the ISO in `~/.cache/lutris/installer/`, so a retry doesn't download it again.
+Setup and the included key generator open together.
+Complete these steps:
 
-The game ends up in `drive_c/Program Files (x86)/EA Games/Need for Speed Undercover` inside the install folder.
+1. Generate a key in the key generator.
+2. Paste the key into setup when it requests one.
+3. Keep the default destination inside setup.
+4. Skip EA registration.
+5. Complete setup.
+6. Close the key generator after setup finishes.
 
-## About the release
+Lutris waits for both programs to close before it continues.
+It copies the original `nfs.exe` into the game's `backup/` directory, then installs the patched executable from the image.
 
-The archive.org upload is a cracked scene release by RELOADED. The game shipped with SecuROM disc protection, and the patched `nfs.exe` from the release skips that check. The script follows the release's own install notes: use the keygen during setup, then copy the `Crack` files into the game folder. The original `nfs.exe` stays in `backup/`.
+## Game files
 
-The official 1.0.1.17 patch is not included. It replaces `nfs.exe` with a version the patched exe doesn't match, so the game stays on the launch version.
+The game directory is relative to the selected installation directory:
+
+```text
+drive_c/Program Files (x86)/EA Games/Need for Speed Undercover/
+```
+
+The patched executable removes the release's SecuROM disc check.
+The installer does not apply the official `1.0.1.17` patch.
+That patch replaces `nfs.exe` and does not match the bundled patched executable.
 
 ## Troubleshooting
 
-"Source does not exist" at the backup step means setup didn't install to the default path. Usually the install location was changed, or setup was cancelled. Run the script again and keep the default location.
+### Setup requests a key
 
-If setup asks for a CD key and you can't see the keygen, it's probably behind the setup window. In Desktop Mode on the Deck, find it on the taskbar or with Alt+Tab. Game Mode only shows one window at a time, so the install is easier in Desktop Mode.
+The key generator can appear behind the setup window.
+Use the desktop taskbar or `Alt+Tab` to select it.
 
-If the installer looks stuck after setup closes, the keygen is probably still open. Close it.
+### Installation waits after setup closes
 
-If Lutris fails to set up Wine with "File exists", see [Troubleshooting](../README.md#troubleshooting) in the main README.
+Close the key generator so Lutris can continue.
 
-If setup asks for the disc, it won't run from an unpacked folder. The script would then need an `insert-disc` step in place of the 7z extract, so you mount `rld-nfuc.iso` yourself and setup runs from the mount.
+### The backup step reports "Source does not exist"
+
+The script expects the default destination inside setup.
+This error can occur if you change that destination or cancel setup.
+Repeat the installation with the default destination.
+
+For Wine extraction errors, see the [repository troubleshooting guide](../README.md#troubleshooting).

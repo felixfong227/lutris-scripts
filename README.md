@@ -1,43 +1,71 @@
-# lutris-scripts
+# Lutris installers
 
-Lutris installer scripts, one game per folder.
+This repository contains Lutris installers for PC games on Linux.
+Each game has one YAML installer and a README with its requirements and installation steps.
 
 ## Games
 
-| Game | Folder | Source |
+| Game | Installer guide | Download source |
 | --- | --- | --- |
-| Need for Speed: Undercover, PC, 2008 | [need-for-speed-undercover](need-for-speed-undercover/) | DVD image on archive.org |
-| Need for Speed: The Run, PC, 2011 | [need-for-speed-the-run](need-for-speed-the-run/) | Ready-to-play copy on archive.org |
+| Need for Speed: Undercover, 2008 | [Undercover](need-for-speed-undercover/README.md) | RELOADED DVD image on Internet Archive |
+| Need for Speed: The Run, 2011 | [The Run](need-for-speed-the-run/README.md) | Game archive on Internet Archive |
+| Forza Horizon 3 (experimental) | [Forza Horizon 3](forza-horizon-3/README.md) | FitGirl repack on Internet Archive |
 
-## Running a script
+The Forza Horizon 3 installer is experimental. Clean installation and gameplay validation are incomplete.
+Read its guide for known limitations before testing.
 
-Install [Lutris](https://lutris.net), then point it at a script:
+## Installation
 
-```
+Install [Lutris](https://lutris.net) before you use these scripts.
+Run the commands from the repository root.
+
+For native Lutris:
+
+```sh
 lutris -i need-for-speed-undercover/need-for-speed-undercover.yaml
 ```
 
-Lutris opens its install dialog and asks where to put the game. It then downloads the files the script lists and runs the steps in order. Each game's README covers anything you have to do by hand during the install.
+For Flatpak Lutris:
 
-## Layout
-
+```sh
+flatpak run net.lutris.Lutris -i need-for-speed-undercover/need-for-speed-undercover.yaml
 ```
+
+1. Select the game installation directory in Lutris.
+2. Wait for Lutris to download the required files.
+3. Complete the steps in the game's installation guide.
+
+Lutris can remove cached downloads after installation.
+Keep a separate copy of large downloads if you want to reuse them.
+
+## Repository layout
+
+```text
 <game-slug>/
-  <game-slug>.yaml   the Lutris script
-  README.md          source, install steps, known problems
+  <game-slug>.yaml
+  README.md
 ```
 
-The folder name is the game's slug on lutris.net, the part after `lutris.net/games/`.
+The folder name matches the game's slug on Lutris.net.
+The slug is the part of the game URL after `lutris.net/games/`.
 
 ## Troubleshooting
 
-Before a script's own steps run, Lutris downloads the Wine version it uses and unpacks it into `runners/wine/`. If an earlier try left that folder half-unpacked, Lutris fails with `[Errno 17] File exists`. Quit Lutris, delete the folder named in the error along with the downloaded archive, then run the script again. With dw-proton on the Steam Deck's Flatpak Lutris:
+An incomplete Wine runner directory can cause `[Errno 17] File exists` during runner extraction.
+This error occurs before the game installation steps start.
 
-```
-rm -rf ~/.var/app/net.lutris.Lutris/data/lutris/runners/wine/dw-proton-x86_64
-rm -f ~/.var/app/net.lutris.Lutris/cache/lutris/dwproton-*.tar.xz
-```
+1. Close Lutris.
+2. Remove the incomplete runner directory named in the error.
+3. Remove the cached Wine runner archive associated with that directory.
+4. Start the installer again.
 
-## Writing a new script
+For Flatpak Lutris, Wine runners are under `~/.var/app/net.lutris.Lutris/data/lutris/runners/wine/`.
+Its download cache is under `~/.var/app/net.lutris.Lutris/cache/lutris/`.
 
-Scripts here use Lutris's standalone format. `name`, `game_slug`, `version`, `slug` and `runner` go at the top level, and everything else goes under `script`. The format is documented in [docs/installers.rst](https://github.com/lutris/lutris/blob/master/docs/installers.rst) in the Lutris repo.
+## Add an installer
+
+Use Lutris's standalone YAML format.
+Place `name`, `game_slug`, `version`, `slug`, and `runner` at the top level.
+Place the remaining settings under `script`.
+
+See the [Lutris installer reference](https://github.com/lutris/lutris/blob/master/docs/installers.rst) for the format and available commands.

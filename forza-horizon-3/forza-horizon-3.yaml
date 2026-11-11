@@ -1,0 +1,386 @@
+name: Forza Horizon 3
+game_slug: forza-horizon-3
+version: archive.org FitGirl PC (experimental)
+slug: forza-horizon-3-archive-org-fitgirl-pc-experiment
+runner: linux
+
+script:
+  variables:
+    SOURCE: https://archive.org/download/c-537-f-9902741647534-f-33-fd-3-a-5-c-817-a-89-c-48-a-19-d/Forza%20Horizon%203%20%5BFitGirl%20Repack%5D
+  game:
+    exe: $GAMEDIR/launch-fh3.sh
+  system:
+    disable_runtime: true
+    env:
+      WINE_UWP_DATA: $GAMEDIR
+      WINEPREFIX: $GAMEDIR/prefix
+      WINE_UWP_DRIVE_FIRST_VIEW: '1'
+      WINE_UWP_DRIVE_VIEW: run
+  files:
+    - vkd3d:
+        url: https://github.com/HansKristian-Work/vkd3d-proton/releases/download/v2.14/vkd3d-proton-2.14.tar.zst
+        filename: vkd3d-proton-2.14.tar.zst
+        checksum: sha256:22e38d0c8606825188e312c51ab744f2d6915b6aa2b78153753a5aa6b0d7fad6
+    - steam_runtime:
+        url: https://repo.steampowered.com/steamrt4/images/4.0.20261007.263973/SteamLinuxRuntime_4.tar.xz
+        filename: SteamLinuxRuntime_4-4.0.20261007.263973.tar.xz
+        checksum: sha256:daa5c8b84049e100706f18997ef117edf06525340fe5e9e3f6596e76e08ef2b2
+    - umu:
+        url: https://github.com/Open-Wine-Components/umu-launcher/releases/download/1.4.4/umu-launcher-1.4.4-zipapp.tar
+        filename: umu-launcher-1.4.4-zipapp.tar
+        checksum: sha256:eb590691841f7fad3fc3ad8fd5db4ccb87849fe7948e62b28ece7a4ee48cc851
+    - appx_portable:
+        url: https://github.com/yell0wsuit/appx-portable/releases/download/v2026.11.4/appx-portable-v2026.11.4-x64.zip
+        filename: appx-portable-v2026.11.4-x64.zip
+        checksum: sha256:56307a8e0398859c1b86b2872e795c47d36d1b3732bfbac4444fa57e86551c0c
+    - offline_files:
+        url: 'N/A:Select the retained fh3-rune-files.7z archive'
+        filename: fh3-rune-files.7z
+        checksum: sha256:b9084574234245d543a954a0ed1af5c6911a42cdba2078b676937ef6e51963e2
+    - proton_support:
+        url: https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-12/GE-Proton11-12-x86_64.tar.gz
+        filename: GE-Proton11-12-x86_64.tar.gz
+        checksum: sha256:0595159e417c3dbbfb7cc3ae0d3ed15a617cc607aa23ef756ea79029d7af5d70
+    - wine_source:
+        url: https://dl.winehq.org/wine/source/11.x/wine-11.20.tar.xz
+        filename: wine-11.20.tar.xz
+        checksum: sha256:eac8ca448f9c0087f963026b4dc276d1e2b7fbb64056edc093e59bbb7e56fe28
+    - windows_iso:
+        url: https://software-static.download.prss.microsoft.com/dbazure/888969d5-f34g-4e03-ac9d-1f9786c66749/26200.6584.250915-1905.25h2_ge_release_svc_refresh_CLIENTENTERPRISEEVAL_OEMRET_x64FRE_en-us.iso
+        filename: windows11-26200.6584-x64.iso
+        checksum: sha256:a61adeab895ef5a4db436e0a7011c92a2ff17bb0357f58b13bbc4062e535e7b9
+    - setup:
+        url: $SOURCE/setup.exe
+        filename: setup.exe
+        checksum: md5:2ba1acd8d847388b23222500c85d1e6f
+    - bin01:
+        url: $SOURCE/fg-01.bin
+        filename: fg-01.bin
+        checksum: md5:edc2ec9ab6504f8d09ddb041c2db70fb
+    - bin02:
+        url: $SOURCE/fg-02.bin
+        filename: fg-02.bin
+        checksum: md5:6054cea06c246607174992bfce9960cf
+    - bin03:
+        url: $SOURCE/fg-03.bin
+        filename: fg-03.bin
+        checksum: md5:e3ac741a83b78b35d08ff1dc63b54b38
+    - bin04:
+        url: $SOURCE/fg-04.bin
+        filename: fg-04.bin
+        checksum: md5:62266398b932dcab5953bb9931da4a6b
+    - bin05:
+        url: $SOURCE/fg-05.bin
+        filename: fg-05.bin
+        checksum: md5:35389e285e385bad83d0c2016b3b654e
+    - bin06:
+        url: $SOURCE/fg-06.bin
+        filename: fg-06.bin
+        checksum: md5:878f1ab8231e61188d32a9c30d0cd130
+    - bin07:
+        url: $SOURCE/fg-07.bin
+        filename: fg-07.bin
+        checksum: md5:ca63d7afc99ba481a34a5aa2cada9554
+    - speech:
+        url: $SOURCE/fg-selective-speech-english.bin
+        filename: fg-selective-speech-english.bin
+        checksum: md5:ea6305a6d9ecebd2e3e1e13680abf7ed
+
+  installer:
+    - merge: {src: vkd3d, dst: $GAMEDIR/downloads}
+    - merge: {src: steam_runtime, dst: $GAMEDIR/downloads}
+    - merge: {src: wine_source, dst: $GAMEDIR/downloads}
+    - merge: {src: windows_iso, dst: $GAMEDIR/downloads}
+    - merge: {src: proton_support, dst: $GAMEDIR/downloads}
+    - merge: {src: umu, dst: $GAMEDIR/downloads}
+    - merge: {src: appx_portable, dst: $GAMEDIR/downloads}
+    - merge: {src: offline_files, dst: $GAMEDIR/downloads}
+    - execute:
+        description: Build Wine UWP and download official DXVK
+        disable_runtime: true
+        env:
+          FH3_WINE_SOURCE: $wine_source
+          FH3_PROTON_SUPPORT: $proton_support
+        command: |
+          set -euo pipefail
+          fail() { printf '%s\n' "$*" >&2; exit 1; }
+          [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] || fail 'This build requires x86-64 Linux.'
+          if [ -f /.flatpak-info ]; then
+            if [ ! -x /usr/lib/sdk/mingw-w64/bin/x86_64-w64-mingw32-gcc ]; then
+              [ "${FH3_BUILD_SDK:-}" != 1 ] || fail 'The matching MinGW extension is not available inside the SDK.'
+              [ -n "${BASH_EXECUTION_STRING:-}" ] || fail 'Start this installer through Lutris.'
+              echo 'Preparing the Flatpak SDK and MinGW compiler for this Lutris installation.'
+              fh3_sdk=$(flatpak-spawn --host flatpak info --show-sdk net.lutris.Lutris)
+              flatpak-spawn --host flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+              flatpak-spawn --host flatpak info "$fh3_sdk" >/dev/null 2>&1 || \
+                flatpak-spawn --host flatpak install --user --noninteractive -y flathub "$fh3_sdk"
+              fh3_ext_branch=$(flatpak-spawn --host flatpak info --show-metadata "$fh3_sdk" | \
+                awk -F= '/^\[/ { sdk = ($0 == "[Extension org.freedesktop.Sdk.Extension]") }
+                  sdk && $1 ~ /^version[[:space:]]*$/ { gsub(/[[:space:]]/, "", $2); print $2 }')
+              [ -n "$fh3_ext_branch" ] || fail 'Cannot determine the MinGW extension version from the SDK metadata.'
+              fh3_mingw="org.freedesktop.Sdk.Extension.mingw-w64/x86_64/$fh3_ext_branch"
+              flatpak-spawn --host flatpak info "$fh3_mingw" >/dev/null 2>&1 || \
+                flatpak-spawn --host flatpak install --user --noninteractive -y flathub "$fh3_mingw"
+              exec flatpak-spawn --host flatpak run --devel --command=bash \
+                "--env=WINE_UWP_DATA=$WINE_UWP_DATA" "--env=WINEPREFIX=$WINEPREFIX" \
+                "--env=FH3_WINE_SOURCE=$FH3_WINE_SOURCE" "--env=FH3_PROTON_SUPPORT=$FH3_PROTON_SUPPORT" --env=FH3_BUILD_SDK=1 \
+                net.lutris.Lutris -c "$BASH_EXECUTION_STRING"
+            fi
+            export PATH="/usr/lib/sdk/mingw-w64/bin:$PATH"
+          fi
+          case "$WINE_UWP_DATA" in *[[:space:]]*) fail 'Choose an install path without spaces for the Wine build.' ;; esac
+          for fh3_dir in prefix windows stage proton-wine-uwp; do
+            [ ! -e "$WINE_UWP_DATA/$fh3_dir" ] || fail 'Choose a fresh install directory. Existing game data will not be overwritten.'
+          done
+          for fh3_tool in git gcc g++ make autoconf autoreconf flex bison pkg-config \
+              x86_64-w64-mingw32-gcc i686-w64-mingw32-gcc \
+              python3 curl tar xz zstd flock nproc; do
+            command -v "$fh3_tool" >/dev/null || fail "Missing $fh3_tool. Install the build dependencies listed in the README."
+          done
+          command -v 7z >/dev/null || command -v 7zz >/dev/null || fail 'Install 7-Zip with WIM support.'
+          python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else "umu requires Python 3.10 or later.")'
+          fh3_sdl="$(pkg-config --variable=libdir sdl2)/libSDL2-2.0.so.0"
+          test -f "$fh3_sdl" || fail 'Install the SDL2 development package before building the runtime.'
+          mkdir -p "$WINE_UWP_DATA/logs"
+          exec > >(tee "$WINE_UWP_DATA/logs/build.log") 2>&1
+          trap 'printf "Build failed. Read %s/logs/build.log and build/wine-build/config.log.\n" "$WINE_UWP_DATA" >&2' ERR
+          export WINE_SRC="$WINE_UWP_DATA/build/wine-source"
+          export WINE_BUILD="$WINE_UWP_DATA/build/wine-build"
+          export WINE_UWP_ROOT="$WINE_UWP_DATA/build/wine-uwp"
+          export UWP_BIN="$WINE_UWP_DATA"
+          mkdir -p "$WINE_SRC" "$WINE_BUILD"
+          tar -xJf "$FH3_WINE_SOURCE" -C "$WINE_SRC" --strip-components=1
+          git init "$WINE_UWP_ROOT"
+          git -C "$WINE_UWP_ROOT" fetch --depth=1 https://github.com/designgears/wine-uwp.git ba955ad4d03f80dbde3682c1508606af5887f010
+          git -C "$WINE_UWP_ROOT" checkout --detach FETCH_HEAD
+          "$WINE_UWP_ROOT/sync-wine.sh" --to-tree
+          cd "$WINE_SRC"
+          autoreconf -f
+          cd "$WINE_BUILD"
+          # Avoid GCC PR109276 while accepting 4-byte-aligned Windows callers.
+          export i386_CFLAGS='-g -O2 -mpreferred-stack-boundary=4 -mincoming-stack-boundary=2'
+          "$WINE_SRC/configure" --prefix=/usr --enable-archs=x86_64,i386 --disable-tests \
+            --with-x --with-vulkan --with-gnutls --with-freetype --with-pulse
+          make -j2
+          "$WINE_UWP_ROOT/packaging/build-dist.sh" "$WINE_UWP_DATA/runtime"
+          "$WINE_UWP_DATA/runtime/bin/wine" --version
+          "$WINE_UWP_ROOT/packaging/build-push-notifications.sh" "$WINE_BUILD" "$WINE_SRC" "$WINE_UWP_DATA/ext/push-notifications"
+          # Assemble the same complete Wine-UWP/GE support layout used by the game test.
+          fh3_proton="$WINE_UWP_DATA/proton-wine-uwp"
+          test ! -e "$fh3_proton"
+          mkdir -p "$fh3_proton"
+          tar -xzf "$FH3_PROTON_SUPPORT" -C "$fh3_proton" --strip-components=1
+          test -x "$fh3_proton/proton"
+          cp -a --remove-destination "$WINE_UWP_DATA/runtime/." "$fh3_proton/files/"
+          # The new WoW64 runtime uses 64-bit Unix libraries for both PE architectures.
+          rm -rf "$fh3_proton/files/lib/wine/i386-unix"
+          mkdir -p "$fh3_proton/files/lib/x86_64-linux-gnu"
+          install -m755 "$fh3_sdl" "$fh3_proton/files/lib/x86_64-linux-gnu/libSDL2-2.0.so.0"
+          printf '%s-wine-uwp-%s\n' "$(cat "$fh3_proton/version")" \
+            "$(git -C "$WINE_UWP_ROOT" rev-parse --short HEAD)" > "$fh3_proton/version.new"
+          mv "$fh3_proton/version.new" "$fh3_proton/version"
+          sha256sum "$fh3_proton/files/bin/wine" "$fh3_proton/files/bin/wineserver" \
+            "$fh3_proton/files/lib/x86_64-linux-gnu/libSDL2-2.0.so.0" > "$WINE_UWP_DATA/logs/proton-assembly.sha256"
+          # The upstream helper downloads and verifies official DXVK without patching it.
+          "$WINE_UWP_ROOT/packaging/build-corewindow-graphics.sh" "$WINE_UWP_DATA/ext/corewindow-graphics"
+          echo 'Wine UWP build and DXVK download complete.'
+    - merge: {src: setup, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin01, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin02, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin03, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin04, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin05, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin06, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin07, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: speech, dst: $GAMEDIR/downloads/repack}
+    - execute:
+        description: Prepare Wine UWP and install the PC game. Choose a fresh install directory.
+        disable_runtime: true
+        env:
+          FH3_RUNTIME: $GAMEDIR/runtime/bin/wine-uwp
+          FH3_ISO: $windows_iso
+          FH3_SETUP: $setup
+          FH3_APPX_ARCHIVE: $appx_portable
+          FH3_OFFLINE_ARCHIVE: $offline_files
+          FH3_UMU_ARCHIVE: $umu
+          FH3_STEAM_RUNTIME: $steam_runtime
+          FH3_VKD3D_ARCHIVE: $vkd3d
+        command: |
+          set -euo pipefail
+          mkdir -p "$WINE_UWP_DATA/logs"
+          exec > >(tee "$WINE_UWP_DATA/logs/install.log") 2>&1
+          test ! -e "$WINEPREFIX"
+          test ! -e "$WINE_UWP_DATA/windows"
+          test ! -e "$WINE_UWP_DATA/stage"
+          fh3_bin=$(dirname "$FH3_RUNTIME")
+          export WINE_BUILD="$fh3_bin" WINE_UWP_ROOT="$fh3_bin/../share/wine-uwp"
+          export UWP_BIN="$WINE_UWP_DATA" WIN11="$WINE_UWP_DATA/windows"
+          "$FH3_RUNTIME" harvest "$FH3_ISO"
+          "$FH3_RUNTIME" new-prefix
+          # Wine UWP creates each app's data folders but requires the Packages parent.
+          "$fh3_bin/wine" cmd /c 'if not exist "%LOCALAPPDATA%\Packages" mkdir "%LOCALAPPDATA%\Packages"'
+          export WINE_UWP_DXVK="$WINE_UWP_DATA/ext/corewindow-graphics/dxvk"
+          # FH3's 2016 profiler rejects the tiled-resource tier reported by newer releases.
+          export WINE_UWP_VKD3D_PROTON="$WINE_UWP_DATA/ext/vkd3d-proton-2.14"
+          test ! -e "$WINE_UWP_VKD3D_PROTON"
+          mkdir -p "$WINE_UWP_VKD3D_PROTON"
+          tar --zstd -xf "$FH3_VKD3D_ARCHIVE" -C "$WINE_UWP_VKD3D_PROTON" --strip-components=1
+          # Proton copies its bundled graphics DLLs into the prefix on launch.
+          fh3_graphics="$WINE_UWP_DATA/proton-wine-uwp/files/lib/wine"
+          for fh3_arch in x86_64-windows i386-windows; do
+            case "$fh3_arch" in
+              x86_64-windows) fh3_dxvk_arch=x64; fh3_vkd3d_arch=x64 ;;
+              i386-windows) fh3_dxvk_arch=x32; fh3_vkd3d_arch=x86 ;;
+            esac
+            cp --remove-destination "$WINE_UWP_DXVK/$fh3_dxvk_arch/"*.dll "$fh3_graphics/dxvk/$fh3_arch/"
+            cp --remove-destination "$WINE_UWP_VKD3D_PROTON/$fh3_vkd3d_arch/"*.dll "$fh3_graphics/vkd3d-proton/$fh3_arch/"
+          done
+          "$WINE_UWP_ROOT/packaging/install-d3d-runtime.sh"
+          cd "$(dirname "$FH3_SETUP")"
+          "$fh3_bin/wine" "$FH3_SETUP" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /NOICONS '/DIR=C:\FH3' '/LOG=C:\fh3-setup.log'
+          fh3_exe=$(find "$WINEPREFIX/drive_c/FH3" -iname forza_x64_release_final.exe -print -quit)
+          test -n "$fh3_exe"
+          fh3_source=$(dirname "$fh3_exe")
+          fh3_dlc="$WINE_UWP_DATA/dlc-source"
+          if [ -d "$fh3_source/MicrosoftStore_DLC" ]; then
+            test ! -e "$fh3_dlc"
+            mv "$fh3_source/MicrosoftStore_DLC" "$fh3_dlc"
+          fi
+          "$FH3_RUNTIME" install "$fh3_source"
+          # The upstream importer connects this runtime only to GDK games. FH3 is UWP.
+          for fh3_dll in dxgi d3d11 d3d12 d3d12core; do
+            fh3_native="$WINE_UWP_DATA/ext/d3d-runtime/x86_64-windows/$fh3_dll.dll"
+            test -s "$fh3_native"
+            ln -s "$fh3_native" "$WINE_UWP_DATA/stage/opuspg/$fh3_dll.dll"
+            "$fh3_bin/wine" reg add 'HKCU\Software\Wine\AppDefaults\forza_x64_release_final.exe\DllOverrides' \
+              /v "$fh3_dll" /t REG_SZ /d native /f
+          done
+          for fh3_manifest in "$fh3_dlc"/*/AppxManifest.xml; do
+            [ -f "$fh3_manifest" ] || continue
+            "$FH3_RUNTIME" install "$(dirname "$fh3_manifest")"
+          done
+          # The selected archives remain outside the prefix and game stage.
+          printf '%s  %s\n' b9084574234245d543a954a0ed1af5c6911a42cdba2078b676937ef6e51963e2 "$FH3_OFFLINE_ARCHIVE" | sha256sum -c -
+          fh3_7z=$(command -v 7z || command -v 7zz)
+          mkdir -p "$WINE_UWP_DATA/ext/appx-portable" "$WINE_UWP_DATA/ext/offline-files"
+          "$fh3_7z" x -y "$FH3_APPX_ARCHIVE" appxportable.dll "-o$WINE_UWP_DATA/ext/appx-portable"
+          "$fh3_7z" x -y "$FH3_OFFLINE_ARCHIVE" 'files/vcruntime140_1_app.dll' 'files/uwp_emu.xml' 'files/xbox_live.json' 'files/*.png' "-o$WINE_UWP_DATA/ext/offline-files"
+          for fh3_file in vcruntime140_1_app.dll uwp_emu.xml xbox_live.json; do
+            test -s "$WINE_UWP_DATA/ext/offline-files/files/$fh3_file"
+            cp --remove-destination "$WINE_UWP_DATA/ext/offline-files/files/$fh3_file" "$WINE_UWP_DATA/stage/opuspg/$fh3_file"
+          done
+          for fh3_file in "$WINE_UWP_DATA/ext/offline-files/files/"*.png; do
+            test -f "$fh3_file"
+            cp --remove-destination "$fh3_file" "$WINE_UWP_DATA/stage/opuspg/"
+          done
+          fh3_system32="$WINEPREFIX/drive_c/windows/system32"
+          ln -sfn "$WINE_UWP_DATA/ext/appx-portable/appxportable.dll" "$fh3_system32/windows.system.profile.systemid.dll"
+          ln -sfn "$WIN11/Windows/System32/Windows.Gaming.Input.dll" "$fh3_system32/windows.gaming.input.dll"
+          for fh3_alias in ext-ms-win-mininput-inputhost-l1-1-0 ext-ms-win-mininput-inputhost-l1-1-1; do
+            ln -sfn "$WIN11/Windows/System32/InputHost.dll" "$fh3_system32/$fh3_alias.dll"
+          done
+          "$fh3_bin/wineserver" -w
+          tar -xf "$FH3_UMU_ARCHIVE" -C "$WINE_UWP_DATA/ext"
+          test -x "$WINE_UWP_DATA/ext/umu/umu-run"
+          test ! -e "$WINE_UWP_DATA/ext/umu/steamrt4"
+          mkdir -p "$WINE_UWP_DATA/ext/umu/steamrt4"
+          tar -xJf "$FH3_STEAM_RUNTIME" -C "$WINE_UWP_DATA/ext/umu/steamrt4" --strip-components=1
+          "$WINE_UWP_DATA/ext/umu/steamrt4/pressure-vessel/bin/pv-verify" --quiet --minimized-runtime \
+            "$WINE_UWP_DATA/ext/umu/steamrt4/steamrt4_platform_4.0.20261007.263973/files"
+          cat > "$WINE_UWP_DATA/launch-fh3.sh" <<'FH3_LAUNCH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          base=$(cd "$(dirname "$0")" && pwd)
+          cd "$base"
+          if [ "${1:-}" != --prepare ] && [ "${FH3_OFFLINE:-}" != 1 ]; then
+            if [ -f /.flatpak-info ]; then
+              exec flatpak-spawn --host flatpak run --unshare=network --command=bash \
+                --env=FH3_OFFLINE=1 "--env=SteamAppId=${SteamAppId:-0}" net.lutris.Lutris "$base/launch-fh3.sh"
+            fi
+            exec env FH3_OFFLINE=1 unshare --user --map-current-user --net "$base/launch-fh3.sh"
+          fi
+          export WINEPREFIX="$base/prefix" PROTONPATH="$base/proton-wine-uwp"
+          export GAMEID=0 UMU_RUNTIME_UPDATE=0 UMU_FOLDERS_PATH="$base/ext"
+          export WINE_UWP_DATA="$base" UWP_BIN="$base" WIN11="$base/windows"
+          export WINE_UWP_ROOT="$PROTONPATH/files/share/wine-uwp"
+          export WINE_UWP_GAMES_DATA="$base" WINE_UWP_WINDOWS_TREE="$base/windows"
+          export WINE_UWP_DRIVE_FIRST_VIEW=1 WINE_UWP_DRIVE_VIEW=run
+          export WINE_UWP_DXVK_COREWINDOW=1
+          export APPX_PORTABLE_MODE=trace
+          if [ ! -f "$base/save-folder.txt" ]; then
+            save_dir=$(xdg-user-dir DOCUMENTS 2>/dev/null || printf '%s/Documents' "$HOME")
+            mkdir -p "$save_dir"
+            printf '%s\n' "$save_dir" > "$base/save-folder.txt"
+          fi
+          IFS= read -r save_dir < "$base/save-folder.txt"
+          test -d "$save_dir"
+          export WINE_UWP_PICKER_FOLDER="Z:${save_dir//\//\\}"
+          unset radv_enable_unified_heap_on_apu
+          fh3_shared_mb=$(awk '/^MemTotal:/ {print int($2 / 2048)}' /proc/meminfo)
+          export DXVK_CONFIG="dxgi.enableDummyCompositionSwapchain = True; dxgi.maxSharedMemory = $fh3_shared_mb"
+          export WINEDLLOVERRIDES='dxgi,d3d11,d3d12,d3d12core=n;windows.system.profile.systemid,ext-ms-win-mininput-inputhost-l1-1-1,ext-ms-win-mininput-inputhost-l1-1-0=n;windows.gaming.input=b;vcruntime140_1_app=n;wineuwp-push-notifications=n'
+          export PROTON_NO_NTSYNC=1 PROTON_NO_ESYNC=1 PROTON_NO_FSYNC=1
+          export WINEDEBUG=-all,err+all PROTON_LOG=1 PROTON_LOG_DIR="$base/logs"
+          export DXVK_LOG_PATH="$base/logs" VKD3D_LOG_FILE="$base/logs/vkd3d.log"
+          export FH3_DATA_WIN="Z:${base//\//\\}"
+          unset WAYLAND_DISPLAY
+          if [ "${1:-}" = --prepare ]; then
+            # Initialize this prefix through the same entry point used for the game.
+            exec "$base/ext/umu/umu-run" "$WINEPREFIX/drive_c/windows/system32/cmd.exe" /c exit
+          fi
+          exec 9> "$base/logs/.opuspg.running"
+          flock -n 9 || exit 0
+          # Keep Mesa's driver defaults and apply unified-memory reporting only to DXVK.
+          # Applying this option to vkd3d as well crashes the tested D3D12 renderer.
+          mkdir -p "$base/ext/dxvk-memory-drirc"
+          for fh3_drirc in /usr/lib/x86_64-linux-gnu/GL/default/share/drirc.d /usr/share/drirc.d; do
+            [ -d "$fh3_drirc" ] || continue
+            cp "$fh3_drirc/"*.conf "$base/ext/dxvk-memory-drirc/"
+            cat > "$base/ext/dxvk-memory-drirc/99-fh3-dxvk-memory.conf" <<'FH3_DRIRC'
+          <driconf>
+            <device driver="radv">
+              <engine engine_name_match="^DXVK$">
+                <option name="radv_enable_unified_heap_on_apu" value="true" />
+              </engine>
+            </device>
+          </driconf>
+          FH3_DRIRC
+            export DRIRC_CONFIGDIR="$base/ext/dxvk-memory-drirc"
+            break
+          done
+          # Steam cannot reliably track this Flatpak game's window in a Wayland session.
+          # Use its documented layout override only when launched from a Steam shortcut.
+          fh3_steam_layout() {
+            if [ -f /.flatpak-info ]; then
+              flatpak-spawn --host env -u LD_PRELOAD -u LD_LIBRARY_PATH steam "steam://forceinputappid/$1"
+            else
+              env -u LD_PRELOAD -u LD_LIBRARY_PATH steam "steam://forceinputappid/$1"
+            fi
+          }
+          case "${SteamAppId:-0}" in
+            ''|0|*[!0-9]*) ;;
+            *)
+              if fh3_steam_layout "$SteamAppId" >> "$base/logs/steam-input.log" 2>&1; then
+                trap 'fh3_steam_layout 413080 >> "$base/logs/steam-input.log" 2>&1 || :; fh3_steam_layout 0 >> "$base/logs/steam-input.log" 2>&1 || :' EXIT
+                trap 'exit 130' INT
+                trap 'exit 143' TERM
+              else
+                echo 'Steam controller layout selection failed. See logs/steam-input.log.' >&2
+              fi
+              ;;
+          esac
+          "$base/ext/umu/umu-run" "$WINEPREFIX/drive_c/windows/system32/cmd.exe" \
+            /c "$FH3_DATA_WIN\launch-fh3.cmd" >> "$base/logs/launch.log" 2>&1
+          FH3_LAUNCH
+          cat > "$WINE_UWP_DATA/launch-fh3.cmd" <<'FH3_BATCH'
+          @echo off
+          reg add "HKLM\Software\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Networking.PushNotifications.PushNotificationChannelManager" /v DllPath /t REG_SZ /d "%FH3_DATA_WIN%\ext\push-notifications\wineuwp-push-notifications.dll" /f
+          if errorlevel 1 exit /b 1
+          reg add "HKLM\Software\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Security.Authentication.Web.Core.WebAuthenticationCoreManager" /v DllPath /t REG_SZ /d "%FH3_DATA_WIN%\windows\Windows\System32\Windows.Security.Authentication.Web.Core.dll" /f
+          if errorlevel 1 exit /b 1
+          "C:\windows\system32\wineuwp-launch.exe" --stage "%FH3_DATA_WIN%\stage\opuspg" --defaults "%FH3_DATA_WIN%\proton-wine-uwp\files\share\wine-uwp\launch-defaults.env" --graphics x11
+          exit /b %errorlevel%
+          FH3_BATCH
+          chmod 755 "$WINE_UWP_DATA/launch-fh3.sh"
+          "$WINE_UWP_DATA/launch-fh3.sh" --prepare
+          cp "$fh3_system32/winmetadata/"*.winmd "$WINEPREFIX/drive_c/windows/syswow64/winmetadata/"
