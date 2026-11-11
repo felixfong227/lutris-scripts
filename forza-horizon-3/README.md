@@ -3,22 +3,20 @@
 **Status: Experimental.** A clean installation from this YAML has not yet been verified.
 Use a separate installation directory and back up existing saves before testing.
 
-This YAML uses the published Wine-UWP revision `58105bc` and its custom DXVK build.
-The newer Wine-side adapter for unmodified DXVK is under separate testing and is not included in this installer.
+This YAML pins upstream Wine-UWP at `ba955ad4`, which includes the merged FH3 support.
+It uses official DXVK 3.1.1 with Wine-UWP's CoreWindow adapter.
 
-The existing test installation passes the game's hardware checks, loads saved progress, and opens the pause menu.
-Keyboard driving and the physical Steam Controller work in direct Lutris launches, and the game exits normally.
-A manual Steam test completed the chase and won the first race in a BMW M4. The game wrote new save data.
-A fresh Steam launch restored the saved race progress.
-The cause of an earlier driving crash remains unknown.
+An isolated test runtime with the Wine-side adapter reached driving gameplay and wrote updated save data.
+Loaded-module hashes confirmed official DXVK 3.1.1 and vkd3d-proton 2.14.
+The reported SUV purchase/colour-confirmation crash is not verified fixed.
+Normal exit, reload, and longer gameplay stability remain unverified on this combination.
 
-Road textures sometimes appear late.
-The generated launcher selected the Steam controller layout automatically in a real launch.
-Test input through Steam's virtual gamepad operated the title screen and accelerator.
-The launcher restored desktop controls after the game exited.
-Disconnecting the external display can crash the runtime. Clean-installation tests remain incomplete.
+Earlier runtime tests showed late road textures and a crash when disconnecting the external display.
+Those issues have not been revalidated on the upstream revision.
+The launcher selected the Steam controller layout and restored desktop controls in earlier tests.
+Clean-installation tests remain incomplete.
 
-This installer builds Wine UWP and DXVK, then installs the PC version of Forza Horizon 3 through Lutris.
+This installer builds Wine UWP, downloads official graphics binaries, and installs the PC version of Forza Horizon 3 through Lutris.
 Wine UWP adds Windows Store application support to Wine.
 The installer uses one YAML file and requires no separate installer script from this repository.
 
@@ -65,8 +63,7 @@ The installer selects package versions from the installed Lutris application's S
 Install these dependencies through your distribution's package manager:
 
 - Git, GCC, G++, Make, Autoconf, Flex, Bison, and pkg-config.
-- The x86-64 and i686 MinGW-w64 C compilers, plus the x86-64 C++ compiler.
-- Meson, Ninja, and glslang.
+- The x86-64 and i686 MinGW-w64 C compilers.
 - Wine development libraries, including X11, Vulkan, GnuTLS, FreeType, and PulseAudio headers.
 - Python 3, curl, tar, xz, zstd, and 7-Zip with WIM support.
 - SDL2 development files, including the `sdl2` pkg-config entry.
@@ -128,27 +125,27 @@ These files contain the offline identity that the game uses for saves.
 ## Runtime and Windows components
 
 The installer downloads Wine 11.20 and checks its SHA-256 hash.
-It applies [the Wine-UWP fork at `58105bc`](https://github.com/felixfong227/wine-uwp/tree/58105bc0e9a656848041b6dd1785a85882c3fafb).
-The YAML uses the fork directly instead of carrying a second copy of its source changes.
+It applies [upstream Wine-UWP at `ba955ad4`](https://github.com/designgears/wine-uwp/tree/ba955ad4d03f80dbde3682c1508606af5887f010), the merged revision of [PR #6](https://github.com/designgears/wine-uwp/pull/6).
+The YAML pins the full commit ID instead of following changes to `main`.
 The Wine build supports x86-64 and i386 and uses two parallel jobs.
 
-The fork's graphics recipe builds DXVK at `a78a467` and vkd3d-proton at `cae2e003`.
-It uses Rosentti's existing CoreWindow implementation with reference cleanup and argument checks.
-FH3 selects that DXVK build and the official [vkd3d-proton 2.14 release](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.14).
-The installer checks the release archive's SHA-256 hash. The generic recipe's newer vkd3d build remains unused by FH3.
+The upstream graphics helper downloads official DXVK 3.1.1 and verifies its archive's SHA-256 hash.
+The launcher enables `WINE_UWP_DXVK_COREWINDOW=1` so Wine-UWP handles CoreWindow presentation through stock DXVK.
+It does not patch or compile DXVK.
+FH3 uses the official [vkd3d-proton 2.14 release](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.14), also checked by SHA-256.
+The installer copies both graphics runtimes into the Proton bundle for x86-64 and i386, so Proton's prefix setup uses the selected versions.
 Version 2.14 reports a tiled-resource tier that FH3's old hardware profiler recognizes, which removes warning FH204.
 
 The launcher also uses Mesa's existing unified-memory option for DXVK only and caps shared-memory reporting at half the system RAM.
 This removes the false FH401 warning on the tested Steam Deck without changing the D3D12 renderer's memory layout.
 The launcher copies the installed Mesa configuration files into this installation before adding that option.
 It does not change the system's Mesa configuration.
-The game passes its hardware checks and loads the existing save with this combination.
-The manual test completed the chase and the first BMW M4 race. A fresh Steam launch restored the saved race progress.
-Road textures sometimes appear late with this combination. Rendering validation remains incomplete.
+The isolated stock-DXVK test reached gameplay with this memory configuration.
+Rendering and save/reload validation remain incomplete.
 
 The installer downloads GE-Proton 11-12 and checks its SHA-256 hash.
 It copies the complete Wine-UWP runtime over the GE support files and includes the build environment's SDL2 library.
-The fork also builds the unchanged WineGDK notification component as `wineuwp-push-notifications.dll`.
+Upstream Wine-UWP also builds the unchanged WineGDK notification component as `wineuwp-push-notifications.dll`.
 The launcher selects that component and the extracted Windows authentication DLL in this game's prefix.
 
 The installer downloads umu 1.4.4 and Steam runtime `4.0.20261007.263973` with SHA-256 checks.
@@ -169,7 +166,7 @@ These paths are relative to the selected installation directory:
 | `build/` | Wine source and build output |
 | `runtime/` | The compiled Wine UWP runtime |
 | `proton-wine-uwp/` | Wine-UWP with GE support files and SDL2 |
-| `ext/` | Graphics builds, notification component, Appx Portable, umu, and Steam runtime |
+| `ext/` | Graphics runtimes, notification component, Appx Portable, umu, and Steam runtime |
 | `windows/` | Extracted Windows components |
 | `prefix/` | The Wine prefix and extracted game files |
 | `dlc-source/` | Extracted expansion packages |
@@ -193,7 +190,7 @@ For other errors, read the corresponding log inside the installation directory:
 
 | Operation | Log |
 | --- | --- |
-| Wine and DXVK compilation | `logs/build.log` |
+| Wine compilation and DXVK download | `logs/build.log` |
 | Wine configuration | `build/wine-build/config.log` |
 | Game installation | `logs/install.log` and `prefix/drive_c/fh3-setup.log` |
 | Launcher startup | `logs/launch.log` |

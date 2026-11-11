@@ -96,7 +96,7 @@ script:
     - merge: {src: appx_portable, dst: $GAMEDIR/downloads}
     - merge: {src: offline_files, dst: $GAMEDIR/downloads}
     - execute:
-        description: Build Wine UWP and DXVK locally
+        description: Build Wine UWP and download official DXVK
         disable_runtime: true
         env:
           FH3_WINE_SOURCE: $wine_source
@@ -133,8 +133,8 @@ script:
             [ ! -e "$WINE_UWP_DATA/$fh3_dir" ] || fail 'Choose a fresh install directory. Existing game data will not be overwritten.'
           done
           for fh3_tool in git gcc g++ make autoconf autoreconf flex bison pkg-config \
-              x86_64-w64-mingw32-gcc x86_64-w64-mingw32-g++ i686-w64-mingw32-gcc \
-              meson ninja glslangValidator python3 curl tar xz zstd flock nproc; do
+              x86_64-w64-mingw32-gcc i686-w64-mingw32-gcc \
+              python3 curl tar xz zstd flock nproc; do
             command -v "$fh3_tool" >/dev/null || fail "Missing $fh3_tool. Install the build dependencies listed in the README."
           done
           command -v 7z >/dev/null || command -v 7zz >/dev/null || fail 'Install 7-Zip with WIM support.'
@@ -151,7 +151,7 @@ script:
           mkdir -p "$WINE_SRC" "$WINE_BUILD"
           tar -xJf "$FH3_WINE_SOURCE" -C "$WINE_SRC" --strip-components=1
           git init "$WINE_UWP_ROOT"
-          git -C "$WINE_UWP_ROOT" fetch --depth=1 https://github.com/felixfong227/wine-uwp.git 58105bc0e9a656848041b6dd1785a85882c3fafb
+          git -C "$WINE_UWP_ROOT" fetch --depth=1 https://github.com/designgears/wine-uwp.git ba955ad4d03f80dbde3682c1508606af5887f010
           git -C "$WINE_UWP_ROOT" checkout --detach FETCH_HEAD
           "$WINE_UWP_ROOT/sync-wine.sh" --to-tree
           cd "$WINE_SRC"
@@ -181,9 +181,9 @@ script:
           mv "$fh3_proton/version.new" "$fh3_proton/version"
           sha256sum "$fh3_proton/files/bin/wine" "$fh3_proton/files/bin/wineserver" \
             "$fh3_proton/files/lib/x86_64-linux-gnu/libSDL2-2.0.so.0" > "$WINE_UWP_DATA/logs/proton-assembly.sha256"
-          # Build the existing CoreWindow implementation and pinned graphics dependencies.
+          # The upstream helper downloads and verifies official DXVK without patching it.
           "$WINE_UWP_ROOT/packaging/build-corewindow-graphics.sh" "$WINE_UWP_DATA/ext/corewindow-graphics"
-          echo 'Wine UWP and DXVK builds complete.'
+          echo 'Wine UWP build and DXVK download complete.'
     - merge: {src: setup, dst: $GAMEDIR/downloads/repack}
     - merge: {src: bin01, dst: $GAMEDIR/downloads/repack}
     - merge: {src: bin02, dst: $GAMEDIR/downloads/repack}
@@ -225,6 +225,16 @@ script:
           test ! -e "$WINE_UWP_VKD3D_PROTON"
           mkdir -p "$WINE_UWP_VKD3D_PROTON"
           tar --zstd -xf "$FH3_VKD3D_ARCHIVE" -C "$WINE_UWP_VKD3D_PROTON" --strip-components=1
+          # Proton copies its bundled graphics DLLs into the prefix on launch.
+          fh3_graphics="$WINE_UWP_DATA/proton-wine-uwp/files/lib/wine"
+          for fh3_arch in x86_64-windows i386-windows; do
+            case "$fh3_arch" in
+              x86_64-windows) fh3_dxvk_arch=x64; fh3_vkd3d_arch=x64 ;;
+              i386-windows) fh3_dxvk_arch=x32; fh3_vkd3d_arch=x86 ;;
+            esac
+            cp --remove-destination "$WINE_UWP_DXVK/$fh3_dxvk_arch/"*.dll "$fh3_graphics/dxvk/$fh3_arch/"
+            cp --remove-destination "$WINE_UWP_VKD3D_PROTON/$fh3_vkd3d_arch/"*.dll "$fh3_graphics/vkd3d-proton/$fh3_arch/"
+          done
           "$WINE_UWP_ROOT/packaging/install-d3d-runtime.sh"
           cd "$(dirname "$FH3_SETUP")"
           "$fh3_bin/wine" "$FH3_SETUP" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /NOICONS '/DIR=C:\FH3' '/LOG=C:\fh3-setup.log'
@@ -295,6 +305,7 @@ script:
           export WINE_UWP_ROOT="$PROTONPATH/files/share/wine-uwp"
           export WINE_UWP_GAMES_DATA="$base" WINE_UWP_WINDOWS_TREE="$base/windows"
           export WINE_UWP_DRIVE_FIRST_VIEW=1 WINE_UWP_DRIVE_VIEW=run
+          export WINE_UWP_DXVK_COREWINDOW=1
           export APPX_PORTABLE_MODE=trace
           if [ ! -f "$base/save-folder.txt" ]; then
             save_dir=$(xdg-user-dir DOCUMENTS 2>/dev/null || printf '%s/Documents' "$HOME")
@@ -307,7 +318,7 @@ script:
           unset radv_enable_unified_heap_on_apu
           fh3_shared_mb=$(awk '/^MemTotal:/ {print int($2 / 2048)}' /proc/meminfo)
           export DXVK_CONFIG="dxgi.enableDummyCompositionSwapchain = True; dxgi.maxSharedMemory = $fh3_shared_mb"
-          export WINEDLLOVERRIDES='windows.system.profile.systemid,ext-ms-win-mininput-inputhost-l1-1-1,ext-ms-win-mininput-inputhost-l1-1-0=n;windows.gaming.input=b;vcruntime140_1_app=n;wineuwp-push-notifications=n'
+          export WINEDLLOVERRIDES='dxgi,d3d11,d3d12,d3d12core=n;windows.system.profile.systemid,ext-ms-win-mininput-inputhost-l1-1-1,ext-ms-win-mininput-inputhost-l1-1-0=n;windows.gaming.input=b;vcruntime140_1_app=n;wineuwp-push-notifications=n'
           export PROTON_NO_NTSYNC=1 PROTON_NO_ESYNC=1 PROTON_NO_FSYNC=1
           export WINEDEBUG=-all,err+all PROTON_LOG=1 PROTON_LOG_DIR="$base/logs"
           export DXVK_LOG_PATH="$base/logs" VKD3D_LOG_FILE="$base/logs/vkd3d.log"
