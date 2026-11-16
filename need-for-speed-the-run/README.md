@@ -1,54 +1,74 @@
 # Need for Speed: The Run
 
-Installs the 2011 PC version of Need for Speed: The Run from a ready-to-play copy on archive.org:
-https://archive.org/details/need-for-speed-the-run_202512
-
-Status: not tested yet.
-
-## What's in the download
-
-The upload is the installed game folder, packed as one 11.2 GB `.7z`. It's already set up:
-
-- Update 1, the last official patch.
-- The Neo crack, which removes EA's activation check.
-- ThirteenAG's Fusion Fix mod, loaded by the `dinput8.dll` in the game folder. That file is ThirteenAG's Ultimate ASI Loader.
-
-There's no setup or keygen, so the install needs nothing from you once it starts.
+This installer extracts the 2011 PC game from the [game archive on Internet Archive](https://archive.org/details/need-for-speed-the-run_202512).
+The archive contains the game directory, so installation does not require a setup program or key generator.
 
 ## Requirements
 
-- Lutris with a Wine runner. The uploader recommends a recent GE-Proton on the Steam Deck. The script uses your default Wine version, so see Troubleshooting if the game won't start.
-- About 29 GB of free space during the install. The archive is 11.2 GB and the unpacked game is 17.5 GB. After the install, the game takes 17.5 GB.
+- Lutris with a Wine runner.
+- Approximately 29 GB of free space during installation.
 
-## Install
+The archive is 11.2 GB. The extracted game needs approximately 17.5 GB.
+The installer uses the default Wine version configured in Lutris.
 
-From the repo root:
+## Installation
 
-```
+Run one of these commands from the repository root.
+
+For native Lutris:
+
+```sh
 lutris -i need-for-speed-the-run/need-for-speed-the-run.yaml
 ```
 
-The script does this:
+For Flatpak Lutris:
 
-1. Downloads the archive and checks its md5. On an 11 GB file the check takes a few minutes.
-2. Creates a 64-bit Wine prefix in the install folder.
-3. Unpacks the game into `Need for Speed The Run/` inside the install folder.
-4. Sets the `dinput8` DLL override to native, so Wine loads the bundled ASI loader and Fusion Fix runs.
+```sh
+flatpak run net.lutris.Lutris -i need-for-speed-the-run/need-for-speed-the-run.yaml
+```
+
+The installer performs these steps:
+
+1. It downloads the archive and checks its MD5 hash.
+2. It creates a 64-bit Wine prefix in the selected installation directory.
+3. It extracts the game into `Need for Speed The Run/` inside that directory.
+4. It sets the `dinput8` override to `n,b` so Wine loads the included ASI loader.
+
+The ASI loader loads Fusion Fix from the game's `plugins/` directory.
+
+## Included files
+
+The archive includes:
+
+- Official Update 1.
+- The Neo crack, which removes EA's activation check.
+- ThirteenAG's Fusion Fix and Ultimate ASI Loader.
 
 ## Fusion Fix settings
 
-The settings file is `Need for Speed The Run/plugins/NFSTheRun.FusionFix.ini` inside the install folder.
+Edit this file inside the installation directory:
 
-The upload comes with every car and challenge series unlocked. To unlock them by playing instead, change `UnlockEverything = 1` to `UnlockEverything = 0`.
+```text
+Need for Speed The Run/plugins/NFSTheRun.FusionFix.ini
+```
 
-The same file also skips the intro videos, `SkipIntro`, and makes windowed mode borderless, `ImproveWindowedMode`.
+The archive's configuration unlocks all cars and challenge series.
+Set `UnlockEverything = 0` if you want to unlock them through gameplay.
+
+The same file contains `SkipIntro` for intro videos and `ImproveWindowedMode` for borderless windowed mode.
 
 ## Troubleshooting
 
-The uploader warns that the game crashes now and then, on Windows too.
+### Change the Wine version
 
-If the game won't start or crashes on launch, try GE-Proton. Right-click the game in Lutris, open Configure, go to Runner options, and pick a GE-Proton build under Wine version.
+1. Open the game's **Configure** dialog in Lutris.
+2. Select **Runner options**.
+3. Select a build under **Wine version**.
 
-If Fusion Fix isn't doing anything, for example the intro videos still play, check that `dinput8` is set to `n,b` under Configure, Runner options, DLL overrides.
+### Fusion Fix does not load
 
-If Lutris fails to set up Wine with "File exists", see [Troubleshooting](../README.md#troubleshooting) in the main README.
+Check **Configure > Runner options > DLL overrides**.
+The `dinput8` entry must contain `n,b`.
+The game directory must also contain the included `dinput8.dll` and `plugins/` directory.
+
+For Wine extraction errors, see the [repository troubleshooting guide](../README.md#troubleshooting).
