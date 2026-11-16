@@ -11,9 +11,9 @@ The game runs offline in Desktop Mode or Steam Deck Game Mode.
 - The `fh3-rune-files.7z` offline archive requested during installation. Its required checksum is in the YAML.
 
 Flatpak Lutris needs permission to run host commands through `flatpak-spawn`.
-For native Lutris, install Python 3.10+, zstd, 7-Zip with WIM support, SDL2, and Wine's runtime libraries.
+For native Lutris, install Python 3.10+, zstd, 7-Zip with the `7z` command and WIM support, SDL2, and Wine's runtime libraries.
 Native launches require glibc 2.38+ and `unshare` with permission to create user and network namespaces.
-Game Mode also requires `xprop` and `xdotool` on the host.
+All installations require `xprop` and `xdotool` on the host for Game Mode window handling.
 
 ## Installation
 

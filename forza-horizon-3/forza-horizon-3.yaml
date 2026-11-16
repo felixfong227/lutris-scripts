@@ -6,7 +6,7 @@ runner: linux
 
 script:
   require-binaries: >-
-    python3, zstd, 7z | 7zz
+    python3, zstd, 7z
   variables:
     SOURCE: https://archive.org/download/c-537-f-9902741647534-f-33-fd-3-a-5-c-817-a-89-c-48-a-19-d/Forza%20Horizon%203%20%5BFitGirl%20Repack%5D
   game:
@@ -323,9 +323,8 @@ script:
           fh3_bin="$WINE_UWP_DATA/runtime/bin"
           # The selected archives remain outside the prefix and game stage.
           printf '%s  %s\n' b9084574234245d543a954a0ed1af5c6911a42cdba2078b676937ef6e51963e2 "$FH3_OFFLINE_ARCHIVE" | sha256sum -c -
-          fh3_7z=$(command -v 7z || command -v 7zz)
           mkdir -p "$WINE_UWP_DATA/ext/offline-files"
-          "$fh3_7z" x -y "$FH3_OFFLINE_ARCHIVE" 'files/vcruntime140_1_app.dll' 'files/uwp_emu.xml' 'files/xbox_live.json' 'files/*.png' "-o$WINE_UWP_DATA/ext/offline-files"
+          7z x -y "$FH3_OFFLINE_ARCHIVE" 'files/vcruntime140_1_app.dll' 'files/uwp_emu.xml' 'files/xbox_live.json' 'files/*.png' "-o$WINE_UWP_DATA/ext/offline-files"
           fh3_offline="$WINE_UWP_DATA/ext/offline-files/files"
           for fh3_file in vcruntime140_1_app.dll uwp_emu.xml xbox_live.json; do
             test -s "$fh3_offline/$fh3_file"
@@ -380,7 +379,7 @@ script:
             mkdir -p "$save_dir"
             printf '%s\n' "$save_dir" > "$base/save-folder.txt"
           fi
-          IFS= read -r save_dir < "$base/save-folder.txt"
+          IFS= read -r save_dir < "$base/save-folder.txt" || [ -n "$save_dir" ]
           test -d "$save_dir"
           export WINE_UWP_PICKER_FOLDER="Z:${save_dir//\//\\}"
           unset radv_enable_unified_heap_on_apu
@@ -499,7 +498,6 @@ script:
           if errorlevel 1 exit /b 1
           "C:\windows\system32\wineuwp-launch.exe" --stage "%FH3_DATA_WIN%\stage\opuspg" --defaults "%FH3_DATA_WIN%\proton-wine-uwp\files\share\wine-uwp\launch-defaults.env" --graphics x11
           exit /b %errorlevel%
-    - chmodx: $GAMEDIR/launch-fh3.sh
     - execute:
         description: Initialize Proton through the game launcher
         disable_runtime: true

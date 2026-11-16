@@ -135,11 +135,11 @@ def main():
             else:
                 raise AssertionError('Xvfb did not become ready')
 
-            def run_case(name, *, env_changes=None, flatpak=False, prepare=False, **options):
+            def run_case(name, *, env_changes=None, flatpak=False, prepare=False, save_newline=True, **options):
                 base = root / name
                 for directory in ('logs', 'save', 'ext/umu'):
                     (base / directory).mkdir(parents=True)
-                (base / 'save-folder.txt').write_text(str(base / 'save') + '\n')
+                (base / 'save-folder.txt').write_text(str(base / 'save') + ('\n' if save_newline else ''))
                 launch = base / 'launch-fh3.sh'
                 script(launch, launcher)
                 if flatpak:
@@ -197,6 +197,7 @@ exec "$FH3_TEST_PYTHON" "$FH3_TEST_SCRIPT" --child "$FH3_TEST_CONFIG"
             run_case('unavailable-display', env_changes={'DISPLAY': ':95'}, tagged=False, exit_code=17)
             run_case('desktop-mode', env_changes={'XDG_CURRENT_DESKTOP': 'KDE', 'XDG_SESSION_DESKTOP': 'KDE'}, tagged=False)
             run_case('prefix-prepare', prepare=True)
+            run_case('save-path-without-newline', save_newline=False)
             print('ALL_BASH_GAME_MODE_TESTS_PASS', flush=True)
         finally:
             server.terminate()
