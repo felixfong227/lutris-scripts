@@ -11,7 +11,7 @@ Each game has one YAML installer and a README with its requirements and installa
 | Need for Speed: The Run, 2011 | [The Run](need-for-speed-the-run/README.md) | Game archive on Internet Archive |
 | Forza Horizon 3 | [Forza Horizon 3](forza-horizon-3/README.md) | FitGirl repack on Internet Archive |
 
-Read its guide for known limitations before testing.
+Read each game's guide for its requirements and installation steps.
 
 ## Installation
 
