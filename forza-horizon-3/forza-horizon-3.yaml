@@ -1,7 +1,7 @@
 name: Forza Horizon 3
 game_slug: forza-horizon-3
-version: archive.org FitGirl PC (experimental)
-slug: forza-horizon-3-archive-org-fitgirl-pc-experiment
+version: archive.org FitGirl PC
+slug: forza-horizon-3-archive-org-fitgirl-pc
 runner: linux
 
 script:

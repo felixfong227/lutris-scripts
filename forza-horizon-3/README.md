@@ -1,7 +1,4 @@
-# Forza Horizon 3 (experimental)
-
-**Status: Experimental.** A clean installation from this YAML has not yet been verified.
-Use a separate installation directory and back up existing saves before testing.
+# Forza Horizon 3
 
 This YAML downloads the prebuilt Wine-UWP `v2026.11.14` release, built from `75b99e6`, and verifies its SHA-256 hash.
 No Wine compilation or Flatpak SDK installation is required.
