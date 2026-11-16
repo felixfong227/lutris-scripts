@@ -2,20 +2,21 @@
 """Check the generated Bash launcher on Linux with Xvfb, xprop and xdotool.
 
 python3 test_gamemode.py /path/to/umu-run
-The UMU ZIPAPP supplies Xlib for test windows only. Wine/UMU and Steam commands
+Requires PyYAML. The UMU ZIPAPP supplies Xlib for test windows only. Wine/UMU and Steam commands
 are replaced by fixtures. The installed launcher never runs this test script.
 """
 from contextlib import closing
 import json
 import os
 from pathlib import Path
-import re
 import shutil
+from string import Template
 import subprocess
 import sys
 import tempfile
-import textwrap
 import time
+
+import yaml
 
 APPID = 0xCAFE1234
 GAME_CLASS = 'forza_x64_release_final.exe'
@@ -92,9 +93,12 @@ def main():
     from Xlib import display, error
 
     source = (Path(__file__).resolve().parents[1] / 'forza-horizon-3.yaml').read_text()
-    match = re.search(r"<<'FH3_LAUNCH'\n(.*?)^          FH3_LAUNCH$", source, re.M | re.S)
-    assert match
-    launcher = textwrap.dedent(match.group(1))
+    installer = yaml.safe_load(source)['script']['installer']
+    launcher = next(step['write_file']['content'] for step in installer
+                    if step.get('write_file', {}).get('file') == '$GAMEDIR/launch-fh3.sh')
+    # Lutris write_file uses string.Template, which turns $$ into a literal $.
+    # Exercise the generated script rather than the raw YAML content.
+    launcher = Template(launcher).safe_substitute(HOME='/home/test-user')
     assert 'python' not in launcher.lower() and 'FH3_UMU' not in launcher
     assert 'run_in_steammode' not in source, 'Do not patch UMU'
     subprocess.run(['bash', '-n'], input=launcher, text=True, check=True)

@@ -6,8 +6,7 @@ runner: linux
 
 script:
   require-binaries: >-
-    bash, python3, curl, tar, xz, zstd, 7z | 7zz, flock, install, readlink, realpath, dd,
-    awk, sed, grep, find, sha256sum, cp, mv, ln, mkdir, rm, chmod, dirname, cat, tee, uname, sleep
+    python3, zstd, 7z | 7zz
   variables:
     SOURCE: https://archive.org/download/c-537-f-9902741647534-f-33-fd-3-a-5-c-817-a-89-c-48-a-19-d/Forza%20Horizon%203%20%5BFitGirl%20Repack%5D
   game:
@@ -98,24 +97,9 @@ script:
         checksum: md5:ea6305a6d9ecebd2e3e1e13680abf7ed
 
   installer:
-    - merge: {src: vkd3d, dst: $GAMEDIR/downloads}
-    - merge: {src: steam_runtime, dst: $GAMEDIR/downloads}
-    - merge: {src: wine_runtime, dst: $GAMEDIR/downloads}
-    - merge: {src: winegdk, dst: $GAMEDIR/downloads}
-    - merge: {src: dxvk, dst: $GAMEDIR/downloads}
-    - merge: {src: windows_iso, dst: $GAMEDIR/downloads}
-    - merge: {src: proton_support, dst: $GAMEDIR/downloads}
-    - merge: {src: umu, dst: $GAMEDIR/downloads}
-    - merge: {src: appx_portable, dst: $GAMEDIR/downloads}
-    - merge: {src: offline_files, dst: $GAMEDIR/downloads}
     - execute:
-        description: Prepare prebuilt Wine UWP and official graphics runtimes
+        description: Check the host and protect existing installations
         disable_runtime: true
-        env:
-          FH3_WINE_ARCHIVE: $wine_runtime
-          FH3_WINEGDK_ARCHIVE: $winegdk
-          FH3_DXVK_ARCHIVE: $dxvk
-          FH3_PROTON_SUPPORT: $proton_support
         command: |
           set -euo pipefail
           fail() { printf '%s\n' "$*" >&2; exit 1; }
@@ -137,6 +121,37 @@ script:
             [ ! -e "$WINE_UWP_DATA/$fh3_dir" ] || fail 'Choose a fresh install directory. Existing game data will not be overwritten.'
           done
           python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else "umu requires Python 3.10 or later.")'
+          mkdir -p "$WINE_UWP_DATA/logs"
+    - merge: {src: vkd3d, dst: $GAMEDIR/downloads}
+    - merge: {src: steam_runtime, dst: $GAMEDIR/downloads}
+    - merge: {src: wine_runtime, dst: $GAMEDIR/downloads}
+    - merge: {src: winegdk, dst: $GAMEDIR/downloads}
+    - merge: {src: dxvk, dst: $GAMEDIR/downloads}
+    - merge: {src: windows_iso, dst: $GAMEDIR/downloads}
+    - merge: {src: proton_support, dst: $GAMEDIR/downloads}
+    - merge: {src: umu, dst: $GAMEDIR/downloads}
+    - merge: {src: appx_portable, dst: $GAMEDIR/downloads}
+    - merge: {src: offline_files, dst: $GAMEDIR/downloads}
+    - extract:
+        description: Extract Wine-UWP
+        file: wine_runtime
+        dst: $GAMEDIR/runtime
+    - extract:
+        description: Extract Proton support files
+        file: proton_support
+        dst: $GAMEDIR/proton-wine-uwp
+    - extract:
+        description: Extract DXVK
+        file: dxvk
+        dst: $GAMEDIR/ext/corewindow-graphics/dxvk
+    - execute:
+        description: Assemble Wine-UWP and the FH3 notification component
+        disable_runtime: true
+        env:
+          FH3_WINEGDK_ARCHIVE: $winegdk
+        command: |
+          set -euo pipefail
+          fail() { printf '%s\n' "$*" >&2; exit 1; }
           # Copy the installed SDL2 runtime library, without requiring development packages.
           fh3_sdl=
           for fh3_candidate in /usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0 /usr/lib64/libSDL2-2.0.so.0 /usr/lib/libSDL2-2.0.so.0; do
@@ -145,7 +160,6 @@ script:
           [ -n "$fh3_sdl" ] || fail 'Install the SDL2 runtime library in the Lutris environment.'
           mkdir -p "$WINE_UWP_DATA/logs" "$WINE_UWP_DATA/runtime"
           exec > >(tee "$WINE_UWP_DATA/logs/runtime-setup.log") 2>&1
-          tar -xJf "$FH3_WINE_ARCHIVE" -C "$WINE_UWP_DATA/runtime" --strip-components=1
           "$WINE_UWP_DATA/runtime/bin/wine" --version
           # The Wine-UWP release omits this FH3 dependency. Extract WineGDK's published
           # implementation and keep it separate from Wine's connectivity module.
@@ -163,9 +177,6 @@ script:
             bs=1 seek=64 count=1 conv=notrunc status=none
           # Assemble the same complete Wine-UWP/GE support layout used by the game test.
           fh3_proton="$WINE_UWP_DATA/proton-wine-uwp"
-          test ! -e "$fh3_proton"
-          mkdir -p "$fh3_proton"
-          tar -xzf "$FH3_PROTON_SUPPORT" -C "$fh3_proton" --strip-components=1
           test -x "$fh3_proton/proton"
           cp -a --remove-destination "$WINE_UWP_DATA/runtime/." "$fh3_proton/files/"
           # The new WoW64 runtime uses 64-bit Unix libraries for both PE architectures.
@@ -177,29 +188,12 @@ script:
           mv "$fh3_proton/version.new" "$fh3_proton/version"
           sha256sum "$fh3_proton/files/bin/wine" "$fh3_proton/files/bin/wineserver" \
             "$fh3_proton/files/lib/x86_64-linux-gnu/libSDL2-2.0.so.0" > "$WINE_UWP_DATA/logs/proton-assembly.sha256"
-          mkdir -p "$WINE_UWP_DATA/ext/corewindow-graphics/dxvk"
-          tar -xzf "$FH3_DXVK_ARCHIVE" -C "$WINE_UWP_DATA/ext/corewindow-graphics/dxvk" --strip-components=1
-          echo 'Prebuilt Wine UWP and DXVK preparation complete.'
-    - merge: {src: setup, dst: $GAMEDIR/downloads/repack}
-    - merge: {src: bin01, dst: $GAMEDIR/downloads/repack}
-    - merge: {src: bin02, dst: $GAMEDIR/downloads/repack}
-    - merge: {src: bin03, dst: $GAMEDIR/downloads/repack}
-    - merge: {src: bin04, dst: $GAMEDIR/downloads/repack}
-    - merge: {src: bin05, dst: $GAMEDIR/downloads/repack}
-    - merge: {src: bin06, dst: $GAMEDIR/downloads/repack}
-    - merge: {src: bin07, dst: $GAMEDIR/downloads/repack}
-    - merge: {src: speech, dst: $GAMEDIR/downloads/repack}
     - execute:
-        description: Prepare Wine UWP and install the PC game. Choose a fresh install directory.
+        description: Extract Windows components and prepare the UWP prefix
         disable_runtime: true
         env:
           FH3_RUNTIME: $GAMEDIR/runtime/bin/wine-uwp
           FH3_ISO: $windows_iso
-          FH3_SETUP: $setup
-          FH3_APPX_ARCHIVE: $appx_portable
-          FH3_OFFLINE_ARCHIVE: $offline_files
-          FH3_UMU_ARCHIVE: $umu
-          FH3_STEAM_RUNTIME: $steam_runtime
           FH3_VKD3D_ARCHIVE: $vkd3d
         command: |
           set -euo pipefail
@@ -216,6 +210,7 @@ script:
           # Wine UWP creates each app's data folders but requires the Packages parent.
           "$fh3_bin/wine" cmd /c 'if not exist "%LOCALAPPDATA%\Packages" mkdir "%LOCALAPPDATA%\Packages"'
           export WINE_UWP_DXVK="$WINE_UWP_DATA/ext/corewindow-graphics/dxvk"
+          # The tested Flatpak Lutris cannot extract tar.zst; use tar for this archive.
           # FH3's 2016 profiler rejects the tiled-resource tier reported by newer releases.
           export WINE_UWP_VKD3D_PROTON="$WINE_UWP_DATA/ext/vkd3d-proton-2.14"
           test ! -e "$WINE_UWP_VKD3D_PROTON"
@@ -223,17 +218,58 @@ script:
           tar --zstd -xf "$FH3_VKD3D_ARCHIVE" -C "$WINE_UWP_VKD3D_PROTON" --strip-components=1
           # Proton copies its bundled graphics DLLs into the prefix on launch.
           fh3_graphics="$WINE_UWP_DATA/proton-wine-uwp/files/lib/wine"
-          for fh3_arch in x86_64-windows i386-windows; do
-            case "$fh3_arch" in
-              x86_64-windows) fh3_dxvk_arch=x64; fh3_vkd3d_arch=x64 ;;
-              i386-windows) fh3_dxvk_arch=x32; fh3_vkd3d_arch=x86 ;;
-            esac
-            cp --remove-destination "$WINE_UWP_DXVK/$fh3_dxvk_arch/"*.dll "$fh3_graphics/dxvk/$fh3_arch/"
-            cp --remove-destination "$WINE_UWP_VKD3D_PROTON/$fh3_vkd3d_arch/"*.dll "$fh3_graphics/vkd3d-proton/$fh3_arch/"
-          done
+          cp --remove-destination "$WINE_UWP_DXVK/x64/"*.dll "$fh3_graphics/dxvk/x86_64-windows/"
+          cp --remove-destination "$WINE_UWP_DXVK/x32/"*.dll "$fh3_graphics/dxvk/i386-windows/"
+          cp --remove-destination "$WINE_UWP_VKD3D_PROTON/x64/"*.dll "$fh3_graphics/vkd3d-proton/x86_64-windows/"
+          cp --remove-destination "$WINE_UWP_VKD3D_PROTON/x86/"*.dll "$fh3_graphics/vkd3d-proton/i386-windows/"
           "$WINE_UWP_ROOT/packaging/install-d3d-runtime.sh"
-          cd "$(dirname "$FH3_SETUP")"
-          "$fh3_bin/wine" "$FH3_SETUP" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /NOICONS '/DIR=C:\FH3' '/LOG=C:\fh3-setup.log'
+    - merge: {src: setup, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin01, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin02, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin03, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin04, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin05, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin06, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: bin07, dst: $GAMEDIR/downloads/repack}
+    - merge: {src: speech, dst: $GAMEDIR/downloads/repack}
+    - write_file:
+        file: $CACHE/fh3-installer-audio.reg
+        content: |
+          REGEDIT4
+
+          [HKEY_CURRENT_USER\Software\Wine\Drivers]
+          "Audio"=""
+    - execute:
+        description: Mute installer music
+        disable_runtime: true
+        file: $GAMEDIR/runtime/bin/wine
+        args: 'regedit /S "$CACHE/fh3-installer-audio.reg"'
+    - execute:
+        description: Install the PC game from the complete repack folder
+        disable_runtime: true
+        file: $GAMEDIR/runtime/bin/wine
+        working_dir: $GAMEDIR/downloads/repack
+        env:
+          WINE_BUILD: $GAMEDIR/runtime/bin
+          WINE_UWP_ROOT: $GAMEDIR/runtime/share/wine-uwp
+          UWP_BIN: $GAMEDIR
+          WIN11: $GAMEDIR/windows
+          WINE_UWP_DXVK: $GAMEDIR/ext/corewindow-graphics/dxvk
+          WINE_UWP_VKD3D_PROTON: $GAMEDIR/ext/vkd3d-proton-2.14
+        args: '"$GAMEDIR/downloads/repack/setup.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /NOICONS "/DIR=C:\FH3" "/LOG=C:\fh3-setup.log"'
+    - execute:
+        description: Import FH3 and its expansions
+        disable_runtime: true
+        env:
+          FH3_RUNTIME: $GAMEDIR/runtime/bin/wine-uwp
+          WINE_UWP_DXVK: $GAMEDIR/ext/corewindow-graphics/dxvk
+          WINE_UWP_VKD3D_PROTON: $GAMEDIR/ext/vkd3d-proton-2.14
+        command: |
+          set -euo pipefail
+          exec > >(tee -a "$WINE_UWP_DATA/logs/install.log") 2>&1
+          fh3_bin=$(dirname "$FH3_RUNTIME")
+          export WINE_BUILD="$fh3_bin" WINE_UWP_ROOT="$fh3_bin/../share/wine-uwp"
+          export UWP_BIN="$WINE_UWP_DATA" WIN11="$WINE_UWP_DATA/windows"
           fh3_exe=$(find "$WINEPREFIX/drive_c/FH3" -iname forza_x64_release_final.exe -print -quit)
           test -n "$fh3_exe"
           fh3_source=$(dirname "$fh3_exe")
@@ -248,27 +284,53 @@ script:
             fh3_native="$WINE_UWP_DATA/ext/d3d-runtime/x86_64-windows/$fh3_dll.dll"
             test -s "$fh3_native"
             ln -s "$fh3_native" "$WINE_UWP_DATA/stage/opuspg/$fh3_dll.dll"
-            "$fh3_bin/wine" reg add 'HKCU\Software\Wine\AppDefaults\forza_x64_release_final.exe\DllOverrides' \
-              /v "$fh3_dll" /t REG_SZ /d native /f
           done
           for fh3_manifest in "$fh3_dlc"/*/AppxManifest.xml; do
             [ -f "$fh3_manifest" ] || continue
             "$FH3_RUNTIME" install "$(dirname "$fh3_manifest")"
           done
+    - write_file:
+        file: $CACHE/fh3-game-settings.reg
+        content: |
+          REGEDIT4
+
+          [HKEY_CURRENT_USER\Software\Wine\Drivers]
+          "Audio"=-
+
+          [HKEY_CURRENT_USER\Software\Wine\AppDefaults\forza_x64_release_final.exe\DllOverrides]
+          "dxgi"="native"
+          "d3d11"="native"
+          "d3d12"="native"
+          "d3d12core"="native"
+    - execute:
+        description: Restore game audio and configure the pinned graphics libraries
+        disable_runtime: true
+        file: $GAMEDIR/runtime/bin/wine
+        args: 'regedit /S "$CACHE/fh3-game-settings.reg"'
+    - extract:
+        description: Extract Appx Portable
+        file: appx_portable
+        dst: $GAMEDIR/ext/appx-portable
+    - execute:
+        description: Install the offline identity and input components
+        disable_runtime: true
+        env:
+          FH3_OFFLINE_ARCHIVE: $offline_files
+        command: |
+          set -euo pipefail
+          exec > >(tee -a "$WINE_UWP_DATA/logs/install.log") 2>&1
+          WIN11="$WINE_UWP_DATA/windows"
+          fh3_bin="$WINE_UWP_DATA/runtime/bin"
           # The selected archives remain outside the prefix and game stage.
           printf '%s  %s\n' b9084574234245d543a954a0ed1af5c6911a42cdba2078b676937ef6e51963e2 "$FH3_OFFLINE_ARCHIVE" | sha256sum -c -
           fh3_7z=$(command -v 7z || command -v 7zz)
-          mkdir -p "$WINE_UWP_DATA/ext/appx-portable" "$WINE_UWP_DATA/ext/offline-files"
-          "$fh3_7z" x -y "$FH3_APPX_ARCHIVE" appxportable.dll "-o$WINE_UWP_DATA/ext/appx-portable"
+          mkdir -p "$WINE_UWP_DATA/ext/offline-files"
           "$fh3_7z" x -y "$FH3_OFFLINE_ARCHIVE" 'files/vcruntime140_1_app.dll' 'files/uwp_emu.xml' 'files/xbox_live.json' 'files/*.png' "-o$WINE_UWP_DATA/ext/offline-files"
+          fh3_offline="$WINE_UWP_DATA/ext/offline-files/files"
           for fh3_file in vcruntime140_1_app.dll uwp_emu.xml xbox_live.json; do
-            test -s "$WINE_UWP_DATA/ext/offline-files/files/$fh3_file"
-            cp --remove-destination "$WINE_UWP_DATA/ext/offline-files/files/$fh3_file" "$WINE_UWP_DATA/stage/opuspg/$fh3_file"
+            test -s "$fh3_offline/$fh3_file"
           done
-          for fh3_file in "$WINE_UWP_DATA/ext/offline-files/files/"*.png; do
-            test -f "$fh3_file"
-            cp --remove-destination "$fh3_file" "$WINE_UWP_DATA/stage/opuspg/"
-          done
+          cp --remove-destination "$fh3_offline"/{vcruntime140_1_app.dll,uwp_emu.xml,xbox_live.json,*.png} "$WINE_UWP_DATA/stage/opuspg/"
           fh3_system32="$WINEPREFIX/drive_c/windows/system32"
           ln -sfn "$WINE_UWP_DATA/ext/appx-portable/appxportable.dll" "$fh3_system32/windows.system.profile.systemid.dll"
           ln -sfn "$WIN11/Windows/System32/Windows.Gaming.Input.dll" "$fh3_system32/windows.gaming.input.dll"
@@ -276,14 +338,24 @@ script:
             ln -sfn "$WIN11/Windows/System32/InputHost.dll" "$fh3_system32/$fh3_alias.dll"
           done
           "$fh3_bin/wineserver" -w
-          tar -xf "$FH3_UMU_ARCHIVE" -C "$WINE_UWP_DATA/ext"
-          test -x "$WINE_UWP_DATA/ext/umu/umu-run"
-          test ! -e "$WINE_UWP_DATA/ext/umu/steamrt4"
-          mkdir -p "$WINE_UWP_DATA/ext/umu/steamrt4"
-          tar -xJf "$FH3_STEAM_RUNTIME" -C "$WINE_UWP_DATA/ext/umu/steamrt4" --strip-components=1
-          "$WINE_UWP_DATA/ext/umu/steamrt4/pressure-vessel/bin/pv-verify" --quiet --minimized-runtime \
-            "$WINE_UWP_DATA/ext/umu/steamrt4/steamrt4_platform_4.0.20261007.263973/files"
-          cat > "$WINE_UWP_DATA/launch-fh3.sh" <<'FH3_LAUNCH'
+    - extract:
+        description: Extract UMU
+        file: umu
+        dst: $GAMEDIR/ext
+        nomerge: true
+    - extract:
+        description: Extract the pinned Steam runtime
+        file: steam_runtime
+        dst: $GAMEDIR/ext/umu/steamrt4
+    - execute:
+        description: Verify the Steam runtime
+        disable_runtime: true
+        file: $GAMEDIR/ext/umu/steamrt4/pressure-vessel/bin/pv-verify
+        args: '--quiet --minimized-runtime "$GAMEDIR/ext/umu/steamrt4/steamrt4_platform_4.0.20261007.263973/files"'
+    - write_file:
+        description: Create launch-fh3.sh
+        file: $GAMEDIR/launch-fh3.sh
+        content: |
           #!/usr/bin/env bash
           set -euo pipefail
           base=$(cd "$(dirname "$0")" && pwd)
@@ -346,13 +418,13 @@ script:
           done
           # Steam cannot reliably track this Flatpak game's window in a Wayland session.
           # Use its documented layout override only when launched from a Steam shortcut.
-          fh3_steam_layout() {
-            if [ -f /.flatpak-info ]; then
-              flatpak-spawn --host env -u LD_PRELOAD -u LD_LIBRARY_PATH steam "steam://forceinputappid/$1"
-            else
-              env -u LD_PRELOAD -u LD_LIBRARY_PATH steam "steam://forceinputappid/$1"
-            fi
-          }
+          fh3_steam=(env -u LD_PRELOAD -u LD_LIBRARY_PATH steam)
+          fh3_x11=()
+          if [ -f /.flatpak-info ]; then
+            fh3_steam=(flatpak-spawn --host "${fh3_steam[@]}")
+            fh3_x11=(flatpak-spawn --host env -u LD_PRELOAD -u LD_LIBRARY_PATH "DISPLAY=${DISPLAY:-}")
+          fi
+          fh3_steam_layout() { "${fh3_steam[@]}" "steam://forceinputappid/$1"; }
           fh3_window_pid=
           fh3_restore_layout=0
           fh3_cleanup() {
@@ -380,13 +452,10 @@ script:
           esac
           # BEGIN FH3_GAME_MODE
           # X tools run on the host for Flatpak; the game stays in its offline namespace.
-          fh3_x11=()
-          if [ -f /.flatpak-info ]; then
-            fh3_x11=(flatpak-spawn --host env -u LD_PRELOAD -u LD_LIBRARY_PATH "DISPLAY=${DISPLAY:-}")
-          fi
+          fh3_launcher_pid=$BASHPID
           fh3_tag_windows() {
             local window properties pid
-            while kill -0 "$$" 2>/dev/null; do
+            while kill -0 "$fh3_launcher_pid" 2>/dev/null; do
               for window in $("${fh3_x11[@]}" xdotool search --onlyvisible --class '^forza_x64_release_final\.exe$' 2>/dev/null || :); do
                 properties=$("${fh3_x11[@]}" xprop -id "$window" WM_NAME _NET_WM_PID STEAM_GAME 2>/dev/null) || continue
                 grep -Fxq 'WM_NAME(STRING) = "Forza Horizon 3"' <<< "$properties" || continue
@@ -419,8 +488,10 @@ script:
           # END FH3_GAME_MODE
           "$base/ext/umu/umu-run" "$WINEPREFIX/drive_c/windows/system32/cmd.exe" \
             /c "$FH3_DATA_WIN\launch-fh3.cmd" >> "$base/logs/launch.log" 2>&1
-          FH3_LAUNCH
-          cat > "$WINE_UWP_DATA/launch-fh3.cmd" <<'FH3_BATCH'
+    - write_file:
+        description: Create launch-fh3.cmd
+        file: $GAMEDIR/launch-fh3.cmd
+        content: |
           @echo off
           reg add "HKLM\Software\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Networking.PushNotifications.PushNotificationChannelManager" /v DllPath /t REG_SZ /d "%FH3_DATA_WIN%\ext\push-notifications\wineuwp-push-notifications.dll" /f
           if errorlevel 1 exit /b 1
@@ -428,7 +499,12 @@ script:
           if errorlevel 1 exit /b 1
           "C:\windows\system32\wineuwp-launch.exe" --stage "%FH3_DATA_WIN%\stage\opuspg" --defaults "%FH3_DATA_WIN%\proton-wine-uwp\files\share\wine-uwp\launch-defaults.env" --graphics x11
           exit /b %errorlevel%
-          FH3_BATCH
-          chmod 755 "$WINE_UWP_DATA/launch-fh3.sh"
-          "$WINE_UWP_DATA/launch-fh3.sh" --prepare
-          cp "$fh3_system32/winmetadata/"*.winmd "$WINEPREFIX/drive_c/windows/syswow64/winmetadata/"
+    - chmodx: $GAMEDIR/launch-fh3.sh
+    - execute:
+        description: Initialize Proton through the game launcher
+        disable_runtime: true
+        file: $GAMEDIR/launch-fh3.sh
+        args: --prepare
+    - merge:
+        src: $GAMEDIR/prefix/drive_c/windows/system32/winmetadata
+        dst: $GAMEDIR/prefix/drive_c/windows/syswow64/winmetadata
