@@ -3,20 +3,25 @@
 **Status: Experimental.** A clean installation from this YAML has not yet been verified.
 Use a separate installation directory and back up existing saves before testing.
 
-This YAML pins upstream Wine-UWP at `ba955ad4`, which includes the merged FH3 support.
+This YAML downloads the prebuilt Wine-UWP `v2026.11.14` release, built from `75b99e6`, and verifies its SHA-256 hash.
+No Wine compilation or Flatpak SDK installation is required.
+On 2026-11-16, the prebuilt runtime launched FH3 in Desktop Mode and Steam Deck Game Mode through Flatpak Lutris.
+The tests used an isolated copy of an existing prefix and save, with shared game assets.
+They do not establish that a clean installation from this YAML completes.
 It uses official DXVK 3.1.1 with Wine-UWP's CoreWindow adapter.
 
-An isolated test runtime with the Wine-side adapter reached driving gameplay and wrote updated save data.
+Both prebuilt launch tests loaded an existing profile and reached the outdoor driving scene.
+Earlier tests of the Wine-side adapter also reached driving gameplay and wrote updated save data.
 Loaded-module hashes confirmed official DXVK 3.1.1 and vkd3d-proton 2.14.
 The reported SUV purchase/colour-confirmation crash is not verified fixed.
-Normal exit, reload, and longer gameplay stability remain unverified on this combination.
+Both tests exited through the game's Exit to Desktop menu.
+New save writes and longer gameplay stability remain unverified on the prebuilt runtime.
 
 Earlier runtime tests showed late road textures and a crash when disconnecting the external display.
 Those issues have not been revalidated on the upstream revision.
 The launcher selected the Steam controller layout and restored desktop controls in earlier tests.
-Clean-installation tests remain incomplete.
 
-This installer builds Wine UWP, downloads official graphics binaries, and installs the PC version of Forza Horizon 3 through Lutris.
+This installer downloads prebuilt Wine-UWP and graphics binaries, then installs the PC version of Forza Horizon 3 through Lutris.
 Wine UWP adds Windows Store application support to Wine.
 The installer uses one YAML file and requires no separate installer script from this repository.
 
@@ -39,41 +44,30 @@ It keeps all downloaded archives in `downloads/`.
 
 - An x86-64 Linux system with Lutris and Vulkan drivers.
 - A fresh installation directory with no spaces in its path.
-- Space for the Windows image, Wine build, two repack copies, extracted game, and imported game.
+- Space for the Windows image, downloaded runtimes, two repack copies, extracted game, and imported game.
 
-The installer builds its own Wine UWP runtime and combines it with GE-Proton 11-12 support files.
+The installer combines the prebuilt Wine-UWP runtime with GE-Proton 11-12 support files.
+The Wine-UWP release requires glibc 2.38 or later.
 Stock Wine and Proton do not provide the UWP support that this installer requires.
 A Wine prefix contains an application's Windows files and settings.
+
+The YAML declares shared command dependencies with Lutris's `require-binaries`, including `7z | 7zz` as alternatives.
+Lutris checks these commands before downloading files. It does not install missing system packages.
+The YAML also checks host `xprop`/`xdotool`, Python 3.10 or later, and the installed SDL2 runtime library.
 
 ### Flatpak Lutris and Steam Deck
 
 Launch the installer through normal Flatpak Lutris.
-The YAML installs the matching SDK and MinGW compiler extension when either package is absent.
-An SDK contains the compilers, headers, and other tools required for the build.
-
-The installer adds the user-level Flathub remote if necessary.
-It reuses existing packages and installs missing packages in your home directory.
-It does not require `sudo` or change the SteamOS system partition.
-
-Automatic dependency setup requires Lutris's Flatpak host permission through `flatpak-spawn`.
-The installer selects package versions from the installed Lutris application's SDK metadata.
+Host X11 commands require Lutris's `flatpak-spawn` host permission.
+The installer uses the libraries supplied by Lutris's runtime and does not install SDKs or compilers.
 
 ### Native Lutris
 
-Install these dependencies through your distribution's package manager:
-
-- Git, GCC, G++, Make, Autoconf, Flex, Bison, and pkg-config.
-- The x86-64 and i686 MinGW-w64 C compilers.
-- Wine development libraries, including X11, Vulkan, GnuTLS, FreeType, and PulseAudio headers.
-- Python 3, curl, tar, xz, zstd, and 7-Zip with WIM support.
-- SDL2 development files, including the `sdl2` pkg-config entry.
-- Standard Linux utilities, including `flock` and `nproc`.
-- `unshare` with permission to create user and network namespaces.
-
-On Debian or Ubuntu, enable source repositories before you run `sudo apt build-dep wine`.
-Install any remaining tools separately. Package names differ between distributions.
-The installer checks for required tools but does not install native system packages.
-The current validation covers Flatpak Lutris on Steam Deck. Native Lutris remains untested.
+Install Python 3.10 or later, curl, tar, xz, zstd, 7-Zip with WIM support, SDL2, and Wine's runtime libraries through your distribution's package manager.
+Native launches also require `unshare` with permission to create user and network namespaces.
+Game Mode window identification requires `xprop` and `xdotool` on the host.
+The installer checks commands but does not install native system packages.
+Native Lutris remains untested.
 
 ## Installation
 
@@ -92,13 +86,13 @@ lutris -i forza-horizon-3/forza-horizon-3.yaml
 ```
 
 1. Select a fresh installation directory without spaces.
-2. Wait for the downloads and runtime builds to finish.
+2. Wait for the downloads and runtime extraction to finish.
 3. Select the retained offline archive when Lutris requests it.
 4. Complete any setup dialogs that appear.
 
 The repack requests silent installation, but some dialogs can still require input.
-The installer stops if a build command fails.
-The installer launches game setup after the runtime build succeeds.
+The installer stops if runtime preparation fails.
+It launches game setup after the prebuilt runtime is assembled.
 Lutris launches the installed game through the generated `launch-fh3.sh`.
 That launcher uses umu and the assembled Proton runtime inside a network namespace with no external network access.
 
@@ -115,6 +109,30 @@ The launcher reads the shortcut's Steam application ID.
 It uses [Steam's documented layout command](https://partner.steamgames.com/doc/features/steam_controller/getting_started_for_devs#3) to select that layout and restores desktop controls on exit.
 Launches outside Steam do not select a Steam controller layout.
 
+In Steam Deck Game Mode, the launcher associates FH3's window with the current Steam shortcut.
+It uses Bash, `xdotool`, and `xprop` to set `STEAM_GAME` on the game's X11 display.
+It checks the window's class, title, visibility, and a unique launch ID in the owning process before changing the property.
+For Flatpak Lutris, the X11 commands run on the host through the existing `flatpak-spawn` permission.
+The tested SteamOS installation supplies these commands. Other systems need both commands installed for this Game Mode fix.
+The game stays in its offline network namespace.
+The Bash helper handles existing and recreated game windows, then stops when the launcher exits.
+It does not run in Desktop Mode.
+
+The launcher calls the unmodified `umu-run` directly. It has no embedded Python code or UMU override.
+UMU and Proton still use their own Python implementations.
+The repository's Python regression script is only for development; the installer does not download or run it.
+
+The window fix passed isolated X11 regression tests and an actual Steam Deck Game Mode launch with this generated launcher.
+Gamescope reported FH3 as the focused window under the Steam shortcut's application ID.
+The game remained visible through loading the copied save and entering the outdoor driving scene.
+
+Resolution is a separate setting.
+Wine-UWP's `WINE_UWP_WINDOW_SIZE` defaults to `1280x800` for the startup window.
+Its full-screen path uses the monitor reported by Wine, which is Gamescope's virtual display in Game Mode.
+Steam's per-shortcut **Maximum Game Resolution** controls that virtual display's available size.
+A 1920x1080 physical output alone does not make that mode available to FH3.
+The launcher does not change the startup size, Steam's resolution setting, or the game's graphics settings.
+
 The launcher selects your Documents folder automatically and records its absolute path in `save-folder.txt`.
 To use existing progress, put the original save's parent folder in that file before you launch the game.
 The game creates its `Forza Horizon 3` directory inside that parent folder.
@@ -124,12 +142,11 @@ These files contain the offline identity that the game uses for saves.
 
 ## Runtime and Windows components
 
-The installer downloads Wine 11.20 and checks its SHA-256 hash.
-It applies [upstream Wine-UWP at `ba955ad4`](https://github.com/designgears/wine-uwp/tree/ba955ad4d03f80dbde3682c1508606af5887f010), the merged revision of [PR #6](https://github.com/designgears/wine-uwp/pull/6).
-The YAML pins the full commit ID instead of following changes to `main`.
-The Wine build supports x86-64 and i386 and uses two parallel jobs.
+The installer downloads [Wine-UWP v2026.11.14](https://github.com/designgears/wine-uwp/releases/tag/v2026.11.14).
+Its Wine 11.20 runtime supports x86-64 and i386 Windows programs through WoW64.
+The release archive's pinned SHA-256 is `d75b36c77044555c41938fda60d1b6ed96e45a8e1e23cd27561b44ef0a16a1de`.
 
-The upstream graphics helper downloads official DXVK 3.1.1 and verifies its archive's SHA-256 hash.
+The installer downloads official DXVK 3.1.1 and verifies its archive's SHA-256 hash.
 The launcher enables `WINE_UWP_DXVK_COREWINDOW=1` so Wine-UWP handles CoreWindow presentation through stock DXVK.
 It does not patch or compile DXVK.
 FH3 uses the official [vkd3d-proton 2.14 release](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.14), also checked by SHA-256.
@@ -144,8 +161,15 @@ The isolated stock-DXVK test reached gameplay with this memory configuration.
 Rendering and save/reload validation remain incomplete.
 
 The installer downloads GE-Proton 11-12 and checks its SHA-256 hash.
-It copies the complete Wine-UWP runtime over the GE support files and includes the build environment's SDL2 library.
-Upstream Wine-UWP also builds the unchanged WineGDK notification component as `wineuwp-push-notifications.dll`.
+It copies the complete Wine-UWP runtime over the GE support files and includes the installed SDL2 runtime library.
+The Wine-UWP archive does not include the notification component used by this launcher.
+The installer downloads [WineGDK 11.18-15-winrt](https://github.com/BedrockNative/WineGDK/releases/tag/11.18-15-winrt), verifies its archive, and extracts only its x86-64 `windows.networking.connectivity.dll`.
+It stores this DLL separately as `wineuwp-push-notifications.dll` and verifies the extracted file's SHA-256.
+The notification source is unchanged from the WineGDK revision previously compiled by this installer.
+After verifying the extracted DLL, the installer clears one byte of its Wine built-in marker in the DOS stub.
+This lets the native override load the separate component instead of Wine-UWP's connectivity module; it does not change executable code.
+The notification factory and asynchronous-error probe passed with this packaged DLL on the Deck.
+This adds a roughly 450 MiB download.
 The launcher selects that component and the extracted Windows authentication DLL in this game's prefix.
 
 The installer downloads umu 1.4.4 and Steam runtime `4.0.20261007.263973` with SHA-256 checks.
@@ -163,15 +187,14 @@ These paths are relative to the selected installation directory:
 
 | Path | Contents |
 | --- | --- |
-| `build/` | Wine source and build output |
-| `runtime/` | The compiled Wine UWP runtime |
+| `runtime/` | The extracted prebuilt Wine-UWP runtime |
 | `proton-wine-uwp/` | Wine-UWP with GE support files and SDL2 |
 | `ext/` | Graphics runtimes, notification component, Appx Portable, umu, and Steam runtime |
 | `windows/` | Extracted Windows components |
 | `prefix/` | The Wine prefix and extracted game files |
 | `dlc-source/` | Extracted expansion packages |
 | `stage/` | Imported game and expansion packages |
-| `logs/` | Build, installation, and runtime logs |
+| `logs/` | Runtime preparation, installation, and launch logs |
 | `launch-fh3.sh` and `launch-fh3.cmd` | Generated scripts that launch the game |
 
 The save folder can be outside the installation directory.
@@ -183,15 +206,14 @@ Back up both locations and the offline identity files before uninstalling.
 Choose a new installation directory if it already contains `prefix/`, `windows/`, or `stage/`.
 The installer stops before overwriting those directories.
 
-For SDK setup failures or missing tools, read the Lutris installation log.
-These failures can occur before the build creates its log files.
+For missing tools or libraries, read the Lutris installation log.
+These failures can occur before runtime preparation creates its log file.
 
 For other errors, read the corresponding log inside the installation directory:
 
 | Operation | Log |
 | --- | --- |
-| Wine compilation and DXVK download | `logs/build.log` |
-| Wine configuration | `build/wine-build/config.log` |
+| Prebuilt runtime preparation | `logs/runtime-setup.log` |
 | Game installation | `logs/install.log` and `prefix/drive_c/fh3-setup.log` |
 | Launcher startup | `logs/launch.log` |
 | Wine and Proton | `logs/steam-0.log` |

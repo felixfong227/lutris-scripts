@@ -5,6 +5,9 @@ slug: forza-horizon-3-archive-org-fitgirl-pc-experiment
 runner: linux
 
 script:
+  require-binaries: >-
+    bash, python3, curl, tar, xz, zstd, 7z | 7zz, flock, install, readlink, realpath, dd,
+    awk, sed, grep, find, sha256sum, cp, mv, ln, mkdir, rm, chmod, dirname, cat, tee, uname, sleep
   variables:
     SOURCE: https://archive.org/download/c-537-f-9902741647534-f-33-fd-3-a-5-c-817-a-89-c-48-a-19-d/Forza%20Horizon%203%20%5BFitGirl%20Repack%5D
   game:
@@ -41,10 +44,18 @@ script:
         url: https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-12/GE-Proton11-12-x86_64.tar.gz
         filename: GE-Proton11-12-x86_64.tar.gz
         checksum: sha256:0595159e417c3dbbfb7cc3ae0d3ed15a617cc607aa23ef756ea79029d7af5d70
-    - wine_source:
-        url: https://dl.winehq.org/wine/source/11.x/wine-11.20.tar.xz
-        filename: wine-11.20.tar.xz
-        checksum: sha256:eac8ca448f9c0087f963026b4dc276d1e2b7fbb64056edc093e59bbb7e56fe28
+    - wine_runtime:
+        url: https://github.com/designgears/wine-uwp/releases/download/v2026.11.14/wine-uwp-x86_64.tar.xz
+        filename: wine-uwp-v2026.11.14-x86_64.tar.xz
+        checksum: sha256:d75b36c77044555c41938fda60d1b6ed96e45a8e1e23cd27561b44ef0a16a1de
+    - winegdk:
+        url: https://github.com/BedrockNative/WineGDK/releases/download/11.18-15-winrt/wine-11.18-15-winrt.tar.gz
+        filename: wine-11.18-15-winrt.tar.gz
+        checksum: sha256:d8e4ab676e224fddd2b7f14f1d5cec06dd873322a142e00ddb57a5c3e8a0c299
+    - dxvk:
+        url: https://github.com/doitsujin/dxvk/releases/download/v3.1.1/dxvk-3.1.1.tar.gz
+        filename: dxvk-3.1.1.tar.gz
+        checksum: sha256:40565b4a724aadc4433fa4e010b4b23916d9b1f1baeee64e17186db94f54e608
     - windows_iso:
         url: https://software-static.download.prss.microsoft.com/dbazure/888969d5-f34g-4e03-ac9d-1f9786c66749/26200.6584.250915-1905.25h2_ge_release_svc_refresh_CLIENTENTERPRISEEVAL_OEMRET_x64FRE_en-us.iso
         filename: windows11-26200.6584-x64.iso
@@ -89,82 +100,67 @@ script:
   installer:
     - merge: {src: vkd3d, dst: $GAMEDIR/downloads}
     - merge: {src: steam_runtime, dst: $GAMEDIR/downloads}
-    - merge: {src: wine_source, dst: $GAMEDIR/downloads}
+    - merge: {src: wine_runtime, dst: $GAMEDIR/downloads}
+    - merge: {src: winegdk, dst: $GAMEDIR/downloads}
+    - merge: {src: dxvk, dst: $GAMEDIR/downloads}
     - merge: {src: windows_iso, dst: $GAMEDIR/downloads}
     - merge: {src: proton_support, dst: $GAMEDIR/downloads}
     - merge: {src: umu, dst: $GAMEDIR/downloads}
     - merge: {src: appx_portable, dst: $GAMEDIR/downloads}
     - merge: {src: offline_files, dst: $GAMEDIR/downloads}
     - execute:
-        description: Build Wine UWP and download official DXVK
+        description: Prepare prebuilt Wine UWP and official graphics runtimes
         disable_runtime: true
         env:
-          FH3_WINE_SOURCE: $wine_source
+          FH3_WINE_ARCHIVE: $wine_runtime
+          FH3_WINEGDK_ARCHIVE: $winegdk
+          FH3_DXVK_ARCHIVE: $dxvk
           FH3_PROTON_SUPPORT: $proton_support
         command: |
           set -euo pipefail
           fail() { printf '%s\n' "$*" >&2; exit 1; }
-          [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] || fail 'This build requires x86-64 Linux.'
+          [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] || fail 'This runtime requires x86-64 Linux.'
+          # X11 tools execute on the host when the game runs through Flatpak.
+          fh3_host=()
           if [ -f /.flatpak-info ]; then
-            if [ ! -x /usr/lib/sdk/mingw-w64/bin/x86_64-w64-mingw32-gcc ]; then
-              [ "${FH3_BUILD_SDK:-}" != 1 ] || fail 'The matching MinGW extension is not available inside the SDK.'
-              [ -n "${BASH_EXECUTION_STRING:-}" ] || fail 'Start this installer through Lutris.'
-              echo 'Preparing the Flatpak SDK and MinGW compiler for this Lutris installation.'
-              fh3_sdk=$(flatpak-spawn --host flatpak info --show-sdk net.lutris.Lutris)
-              flatpak-spawn --host flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-              flatpak-spawn --host flatpak info "$fh3_sdk" >/dev/null 2>&1 || \
-                flatpak-spawn --host flatpak install --user --noninteractive -y flathub "$fh3_sdk"
-              fh3_ext_branch=$(flatpak-spawn --host flatpak info --show-metadata "$fh3_sdk" | \
-                awk -F= '/^\[/ { sdk = ($0 == "[Extension org.freedesktop.Sdk.Extension]") }
-                  sdk && $1 ~ /^version[[:space:]]*$/ { gsub(/[[:space:]]/, "", $2); print $2 }')
-              [ -n "$fh3_ext_branch" ] || fail 'Cannot determine the MinGW extension version from the SDK metadata.'
-              fh3_mingw="org.freedesktop.Sdk.Extension.mingw-w64/x86_64/$fh3_ext_branch"
-              flatpak-spawn --host flatpak info "$fh3_mingw" >/dev/null 2>&1 || \
-                flatpak-spawn --host flatpak install --user --noninteractive -y flathub "$fh3_mingw"
-              exec flatpak-spawn --host flatpak run --devel --command=bash \
-                "--env=WINE_UWP_DATA=$WINE_UWP_DATA" "--env=WINEPREFIX=$WINEPREFIX" \
-                "--env=FH3_WINE_SOURCE=$FH3_WINE_SOURCE" "--env=FH3_PROTON_SUPPORT=$FH3_PROTON_SUPPORT" --env=FH3_BUILD_SDK=1 \
-                net.lutris.Lutris -c "$BASH_EXECUTION_STRING"
-            fi
-            export PATH="/usr/lib/sdk/mingw-w64/bin:$PATH"
+            command -v flatpak-spawn >/dev/null || fail 'Flatpak Lutris requires flatpak-spawn with host command permission.'
+            fh3_host=(flatpak-spawn --host)
+          else
+            command -v unshare >/dev/null || fail 'Native Lutris requires unshare for offline launches.'
           fi
-          case "$WINE_UWP_DATA" in *[[:space:]]*) fail 'Choose an install path without spaces for the Wine build.' ;; esac
-          for fh3_dir in prefix windows stage proton-wine-uwp; do
+          "${fh3_host[@]}" bash -c '
+            for tool in xprop xdotool; do
+              command -v "$tool" >/dev/null || { printf "Missing host command: %s\n" "$tool" >&2; exit 1; }
+            done
+          ' || fail 'Install xprop and xdotool on the host. Flatpak Lutris also needs host command permission.'
+          for fh3_dir in prefix windows stage runtime proton-wine-uwp ext; do
             [ ! -e "$WINE_UWP_DATA/$fh3_dir" ] || fail 'Choose a fresh install directory. Existing game data will not be overwritten.'
           done
-          for fh3_tool in git gcc g++ make autoconf autoreconf flex bison pkg-config \
-              x86_64-w64-mingw32-gcc i686-w64-mingw32-gcc \
-              python3 curl tar xz zstd flock nproc; do
-            command -v "$fh3_tool" >/dev/null || fail "Missing $fh3_tool. Install the build dependencies listed in the README."
-          done
-          command -v 7z >/dev/null || command -v 7zz >/dev/null || fail 'Install 7-Zip with WIM support.'
           python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else "umu requires Python 3.10 or later.")'
-          fh3_sdl="$(pkg-config --variable=libdir sdl2)/libSDL2-2.0.so.0"
-          test -f "$fh3_sdl" || fail 'Install the SDL2 development package before building the runtime.'
-          mkdir -p "$WINE_UWP_DATA/logs"
-          exec > >(tee "$WINE_UWP_DATA/logs/build.log") 2>&1
-          trap 'printf "Build failed. Read %s/logs/build.log and build/wine-build/config.log.\n" "$WINE_UWP_DATA" >&2' ERR
-          export WINE_SRC="$WINE_UWP_DATA/build/wine-source"
-          export WINE_BUILD="$WINE_UWP_DATA/build/wine-build"
-          export WINE_UWP_ROOT="$WINE_UWP_DATA/build/wine-uwp"
-          export UWP_BIN="$WINE_UWP_DATA"
-          mkdir -p "$WINE_SRC" "$WINE_BUILD"
-          tar -xJf "$FH3_WINE_SOURCE" -C "$WINE_SRC" --strip-components=1
-          git init "$WINE_UWP_ROOT"
-          git -C "$WINE_UWP_ROOT" fetch --depth=1 https://github.com/designgears/wine-uwp.git ba955ad4d03f80dbde3682c1508606af5887f010
-          git -C "$WINE_UWP_ROOT" checkout --detach FETCH_HEAD
-          "$WINE_UWP_ROOT/sync-wine.sh" --to-tree
-          cd "$WINE_SRC"
-          autoreconf -f
-          cd "$WINE_BUILD"
-          # Avoid GCC PR109276 while accepting 4-byte-aligned Windows callers.
-          export i386_CFLAGS='-g -O2 -mpreferred-stack-boundary=4 -mincoming-stack-boundary=2'
-          "$WINE_SRC/configure" --prefix=/usr --enable-archs=x86_64,i386 --disable-tests \
-            --with-x --with-vulkan --with-gnutls --with-freetype --with-pulse
-          make -j2
-          "$WINE_UWP_ROOT/packaging/build-dist.sh" "$WINE_UWP_DATA/runtime"
+          # Copy the installed SDL2 runtime library, without requiring development packages.
+          fh3_sdl=
+          for fh3_candidate in /usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0 /usr/lib64/libSDL2-2.0.so.0 /usr/lib/libSDL2-2.0.so.0; do
+            if [ -f "$fh3_candidate" ]; then fh3_sdl=$fh3_candidate; break; fi
+          done
+          [ -n "$fh3_sdl" ] || fail 'Install the SDL2 runtime library in the Lutris environment.'
+          mkdir -p "$WINE_UWP_DATA/logs" "$WINE_UWP_DATA/runtime"
+          exec > >(tee "$WINE_UWP_DATA/logs/runtime-setup.log") 2>&1
+          tar -xJf "$FH3_WINE_ARCHIVE" -C "$WINE_UWP_DATA/runtime" --strip-components=1
           "$WINE_UWP_DATA/runtime/bin/wine" --version
-          "$WINE_UWP_ROOT/packaging/build-push-notifications.sh" "$WINE_BUILD" "$WINE_SRC" "$WINE_UWP_DATA/ext/push-notifications"
+          # The Wine-UWP release omits this FH3 dependency. Extract WineGDK's published
+          # implementation and keep it separate from Wine's connectivity module.
+          mkdir -p "$WINE_UWP_DATA/ext/push-notifications"
+          tar -xzf "$FH3_WINEGDK_ARCHIVE" -C "$WINE_UWP_DATA/ext/push-notifications" --strip-components=4 \
+            wine-11.18-15-winrt/lib/wine/x86_64-windows/windows.networking.connectivity.dll
+          mv "$WINE_UWP_DATA/ext/push-notifications/windows.networking.connectivity.dll" \
+            "$WINE_UWP_DATA/ext/push-notifications/wineuwp-push-notifications.dll"
+          printf '%s  %s\n' aac3dcf7ef0c00af4284993ace70ea4b4bfcec222b1887dd00545f43af18f66f \
+            "$WINE_UWP_DATA/ext/push-notifications/wineuwp-push-notifications.dll" | sha256sum -c -
+          # WineGDK marks this as a Wine builtin. Clear the marker's first byte in
+          # the DOS stub so the native override loads this separate DLL instead of
+          # Wine-UWP's builtin connectivity module. Executable code is unchanged.
+          printf '\000' | dd of="$WINE_UWP_DATA/ext/push-notifications/wineuwp-push-notifications.dll" \
+            bs=1 seek=64 count=1 conv=notrunc status=none
           # Assemble the same complete Wine-UWP/GE support layout used by the game test.
           fh3_proton="$WINE_UWP_DATA/proton-wine-uwp"
           test ! -e "$fh3_proton"
@@ -177,13 +173,13 @@ script:
           mkdir -p "$fh3_proton/files/lib/x86_64-linux-gnu"
           install -m755 "$fh3_sdl" "$fh3_proton/files/lib/x86_64-linux-gnu/libSDL2-2.0.so.0"
           printf '%s-wine-uwp-%s\n' "$(cat "$fh3_proton/version")" \
-            "$(git -C "$WINE_UWP_ROOT" rev-parse --short HEAD)" > "$fh3_proton/version.new"
+            "$(cat "$WINE_UWP_DATA/runtime/share/wine-uwp/VERSION")" > "$fh3_proton/version.new"
           mv "$fh3_proton/version.new" "$fh3_proton/version"
           sha256sum "$fh3_proton/files/bin/wine" "$fh3_proton/files/bin/wineserver" \
             "$fh3_proton/files/lib/x86_64-linux-gnu/libSDL2-2.0.so.0" > "$WINE_UWP_DATA/logs/proton-assembly.sha256"
-          # The upstream helper downloads and verifies official DXVK without patching it.
-          "$WINE_UWP_ROOT/packaging/build-corewindow-graphics.sh" "$WINE_UWP_DATA/ext/corewindow-graphics"
-          echo 'Wine UWP build and DXVK download complete.'
+          mkdir -p "$WINE_UWP_DATA/ext/corewindow-graphics/dxvk"
+          tar -xzf "$FH3_DXVK_ARCHIVE" -C "$WINE_UWP_DATA/ext/corewindow-graphics/dxvk" --strip-components=1
+          echo 'Prebuilt Wine UWP and DXVK preparation complete.'
     - merge: {src: setup, dst: $GAMEDIR/downloads/repack}
     - merge: {src: bin01, dst: $GAMEDIR/downloads/repack}
     - merge: {src: bin02, dst: $GAMEDIR/downloads/repack}
@@ -357,18 +353,70 @@ script:
               env -u LD_PRELOAD -u LD_LIBRARY_PATH steam "steam://forceinputappid/$1"
             fi
           }
+          fh3_window_pid=
+          fh3_restore_layout=0
+          fh3_cleanup() {
+            if [ -n "$fh3_window_pid" ]; then
+              kill "$fh3_window_pid" 2>/dev/null || :
+              wait "$fh3_window_pid" 2>/dev/null || :
+            fi
+            if [ "$fh3_restore_layout" = 1 ]; then
+              fh3_steam_layout 413080 >> "$base/logs/steam-input.log" 2>&1 || :
+              fh3_steam_layout 0 >> "$base/logs/steam-input.log" 2>&1 || :
+            fi
+          }
+          trap fh3_cleanup EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
           case "${SteamAppId:-0}" in
             ''|0|*[!0-9]*) ;;
             *)
               if fh3_steam_layout "$SteamAppId" >> "$base/logs/steam-input.log" 2>&1; then
-                trap 'fh3_steam_layout 413080 >> "$base/logs/steam-input.log" 2>&1 || :; fh3_steam_layout 0 >> "$base/logs/steam-input.log" 2>&1 || :' EXIT
-                trap 'exit 130' INT
-                trap 'exit 143' TERM
+                fh3_restore_layout=1
               else
                 echo 'Steam controller layout selection failed. See logs/steam-input.log.' >&2
               fi
               ;;
           esac
+          # BEGIN FH3_GAME_MODE
+          # X tools run on the host for Flatpak; the game stays in its offline namespace.
+          fh3_x11=()
+          if [ -f /.flatpak-info ]; then
+            fh3_x11=(flatpak-spawn --host env -u LD_PRELOAD -u LD_LIBRARY_PATH "DISPLAY=${DISPLAY:-}")
+          fi
+          fh3_tag_windows() {
+            local window properties pid
+            while kill -0 "$$" 2>/dev/null; do
+              for window in $("${fh3_x11[@]}" xdotool search --onlyvisible --class '^forza_x64_release_final\.exe$' 2>/dev/null || :); do
+                properties=$("${fh3_x11[@]}" xprop -id "$window" WM_NAME _NET_WM_PID STEAM_GAME 2>/dev/null) || continue
+                grep -Fxq 'WM_NAME(STRING) = "Forza Horizon 3"' <<< "$properties" || continue
+                pid=$(sed -n 's/^_NET_WM_PID(CARDINAL) = \([0-9][0-9]*\)$/\1/p' <<< "$properties")
+                [ -n "$pid" ] && [ "$pid" != 0 ] || continue
+                # The window PID and /proc use the outer Flatpak's namespace.
+                grep -zFxq "FH3_LAUNCH_ID=$FH3_LAUNCH_ID" "/proc/$pid/environ" 2>/dev/null || continue
+                grep -Fxq "STEAM_GAME(CARDINAL) = $fh3_appid" <<< "$properties" && continue
+                "${fh3_x11[@]}" xprop -id "$window" -f STEAM_GAME 32c -set STEAM_GAME "$fh3_appid" || continue
+                printf 'FH3: set STEAM_GAME=%s on window %s.\n' "$fh3_appid" "$window"
+              done
+              sleep 0.5
+            done
+          }
+          fh3_appid=${SteamAppId:-0}
+          if { [ "${XDG_CURRENT_DESKTOP:-}" = gamescope ] || [ "${XDG_SESSION_DESKTOP:-}" = gamescope ]; } &&
+             [ "${STEAM_MULTIPLE_XWAYLANDS:-}" = 1 ] && [ -n "${DISPLAY:-}" ] &&
+             [[ $fh3_appid =~ ^[0-9]{1,10}$ ]] && ((10#$fh3_appid > 0 && 10#$fh3_appid <= 4294967295)); then
+            fh3_appid=$((10#$fh3_appid))
+            if "${fh3_x11[@]}" xdotool version >/dev/null 2>&1 &&
+               "${fh3_x11[@]}" xprop -root >/dev/null 2>&1; then
+              IFS= read -r FH3_LAUNCH_ID < /proc/sys/kernel/random/uuid
+              export FH3_LAUNCH_ID
+              fh3_tag_windows >> "$base/logs/launch.log" 2>&1 &
+              fh3_window_pid=$!
+            else
+              echo 'FH3: Game Mode window tagging needs xprop and xdotool with access to the game display.' >&2
+            fi
+          fi
+          # END FH3_GAME_MODE
           "$base/ext/umu/umu-run" "$WINEPREFIX/drive_c/windows/system32/cmd.exe" \
             /c "$FH3_DATA_WIN\launch-fh3.cmd" >> "$base/logs/launch.log" 2>&1
           FH3_LAUNCH
